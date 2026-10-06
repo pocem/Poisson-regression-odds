@@ -203,10 +203,10 @@ table.data tr:last-child td { border-bottom: 0; }
 table.data .num { text-align: right; }
 table.data .hl { font-weight: 650; color: var(--ink); }
 table.data .dim { color: var(--muted); }
-.pill { display: inline-block; font-size: 11.5px; border-radius: 999px; padding: 1px 8px; background: var(--surface-2); color: var(--ink-2); }
 .mark-ok { color: var(--good); font-weight: 700; }
 .mark-no { color: var(--muted); }
 .better-cell { color: var(--good); font-weight: 600; }
+.worse-cell { color: var(--bad); font-weight: 600; }
 
 /* Multi-column flow: rank 1 at the top of the first column, reading down, then on to the next column. */
 .elo-grid { columns: 260px 3; column-gap: 28px; padding: 6px 16px; }
@@ -278,7 +278,7 @@ footer p { margin: 6px 0; }
 
   <section id="matches">
     <div class="section-head">
-      <div><h2>Every match</h2><p>Both model and Bet365 odds are margin-free: Bet365's margin is removed proportionally so the two compare directly.</p></div>
+      <div><h2>Every match</h2><p>Both model and Bet365 odds are margin-free: Bet365's margin is removed proportionally so the two compare directly. The model's log loss is green where it beat Bet365 and red where Bet365 did better.</p></div>
       <div class="filters">
         <select id="roundFilter" aria-label="Filter by round"></select>
         <select id="teamFilter" aria-label="Filter by team"></select>
@@ -289,7 +289,7 @@ footer p { margin: 6px 0; }
         <thead><tr>
           <th>Rd</th><th>Date</th><th>Match</th><th class="num">Score</th>
           <th class="num">Model H / D / A</th><th class="num">Bet365 H / D / A<br><span style="font-weight:400">margin removed</span></th>
-          <th>Pick</th><th class="num">Log loss<br>model</th><th class="num">Log loss<br>Bet365</th><th>Forecast</th>
+          <th>Pick</th><th class="num">Log loss<br>model</th><th class="num">Log loss<br>Bet365</th>
         </tr></thead>
         <tbody id="matchRows"></tbody>
       </table>
@@ -306,7 +306,7 @@ footer p { margin: 6px 0; }
 
   <footer>
     <p><strong>How it works.</strong> A bivariate Poisson regression predicts each side's goals from Elo, rolling xG and xGA, points per game and shots-on-target difference. The model is trained once on the last three completed seasons and stays frozen for the whole season; each round only its inputs are updated with the latest results, so this season's form reaches it through Elo, xG, points per game and shots, not through refitting. Its goal predictions are turned into home / draw / away probabilities and scoreline odds.</p>
-    <p><strong>Forecast column.</strong> "Live" means the prediction was logged before kickoff; "backtest" means it was recreated afterwards with the same frozen model and only the data available before that match.</p>
+    <p><strong>Played matches.</strong> Each shows the prediction logged before kickoff where one exists; otherwise it is recreated with the same frozen model and only the data available before that match.</p>
     <p>Data: football-data.co.uk (results, stats, Bet365 odds), Understat (xG), fixturedownload.com (fixtures). Bet365's margin is removed proportionally, so its odds and probabilities compare directly with the model's.</p>
   </footer>
 </div>
@@ -503,7 +503,8 @@ footer p { margin: 6px 0; }
       .sort((a, b) => b.round - a.round || a.kickoff.localeCompare(b.kickoff));
     const triple = (arr, hl) => arr.map((v, i) => `<span class="${OUT[i] === hl ? "hl" : "dim"}">${odd(v)}</span>`).join(" / ");
     $("matchRows").innerHTML = rows.length ? rows.map((m) => {
-      const better = m.ll.b365 != null && m.ll.model < m.ll.b365;
+      const llCls = m.ll.b365 == null ? "" : m.ll.model < m.ll.b365 ? "better-cell" : m.ll.model > m.ll.b365 ? "worse-cell" : "";
+      const llTitle = llCls === "better-cell" ? "Model beat Bet365" : llCls === "worse-cell" ? "Bet365 beat the model" : "";
       return `<tr>
         <td>${m.round}</td><td>${esc(fmtDate(m.kickoff))}</td>
         <td>${esc(m.home)} – ${esc(m.away)}</td>
@@ -511,10 +512,10 @@ footer p { margin: 6px 0; }
         <td class="num">${triple(m.odds, m.result)}</td>
         <td class="num">${triple(m.b365_fair, m.result)}</td>
         <td>${m.pick === m.result ? `<span class="mark-ok" title="Model's favourite won">✓</span>` : `<span class="mark-no" title="Model's favourite lost">✗</span>`} ${m.pick}</td>
-        <td class="num ${better ? "better-cell" : ""}">${f3(m.ll.model)}</td>
+        <td class="num ${llCls}" title="${llTitle}">${f3(m.ll.model)}</td>
         <td class="num">${f3(m.ll.b365)}</td>
-        <td><span class="pill">${m.source}</span></td></tr>`;
-    }).join("") : `<tr><td colspan="10" class="dim">No matches.</td></tr>`;
+</tr>`;
+    }).join("") : `<tr><td colspan="9" class="dim">No matches.</td></tr>`;
   }
   $("roundFilter").addEventListener("change", renderMatches);
   $("teamFilter").addEventListener("change", renderMatches);
