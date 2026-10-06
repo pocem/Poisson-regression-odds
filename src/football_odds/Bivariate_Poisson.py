@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -5,9 +7,12 @@ from scipy.special import gammaln, logsumexp
 from sklearn.preprocessing import label_binarize
 from scipy import stats
 
-DATA_PATH = "data/processed/all_seasons_14window_ppg.csv"
+DATA_PATH = "data/processed/all_seasons_14window_ppg_full.csv"
+# Played matches of the live season, written by src/live/predict_round.py on every run.
+LIVE_SEASON_PATH = "data/processed/live_season.csv"
 WINDOW = 3
-N_CHUNKS = 5
+N_CHUNKS = 38  # one chunk per round, retrained before each
+MATCHES_PER_ROUND = 10
 
 HOME_COVARIATES = [
     "Home_Elo", "Away_Elo", "Home_xG_Rolling5", "Away_xGA_Rolling5", "Home_PPG",
@@ -17,6 +22,14 @@ AWAY_COVARIATES = [
     "Away_Elo", "Home_Elo", "Away_xG_Rolling5", "Home_xGA_Rolling5", "Away_PPG",
     "Away_ShotOnTargetDifference_RollingTeam7", "Home_ShotOnTargetDifference_RollingTeam7",
 ]
+
+# Everything the datasets keep: match identifiers, targets, the covariates
+# above, and the bookmaker odds walk_forward_vs_market() compares against.
+DATASET_COLUMNS = (
+    ["Date", "Time", "HomeTeam", "AwayTeam", "Season", "FTHG", "FTAG", "FTR"]
+    + list(dict.fromkeys(HOME_COVARIATES + AWAY_COVARIATES))
+    + ["B365HomeOdds", "B365DrawOdds", "B365AwayOdds", "AvgHomeOdds", "AvgDrawOdds", "AvgAwayOdds"]
+)
 
 
 def _bivpois_logpmf(x, y, lam1, lam2, lam3):
@@ -155,7 +168,7 @@ def walk_forward_vs_market(all_df):
     all_model_ll, all_b365_ll, all_avg_ll = [], [], []
     all_model_brier, all_b365_brier, all_avg_brier = [], [], []
     all_model_correct = []
-    per_chunk_idx_ll = {i: [] for i in range(N_CHUNKS)}
+    per_chunk_idx_ll = {i: [] for i in range(N_CHUNKS + 1)}
 
     for i in range(WINDOW, len(seasons)):
         train_seasons = seasons[i - WINDOW:i]
@@ -163,7 +176,9 @@ def walk_forward_vs_market(all_df):
 
         prior_df = all_df[all_df["Season"].isin(train_seasons)]
         season_df = all_df[all_df["Season"] == test_season].sort_values("Date").reset_index(drop=True)
-        chunks = np.array_split(season_df, N_CHUNKS)
+        # Fixed 10-match chunks (= rounds), not array_split, so a live season
+        # that's only partly played still gets one chunk per round.
+        chunks = [season_df.iloc[r:r + MATCHES_PER_ROUND] for r in range(0, len(season_df), MATCHES_PER_ROUND)]
 
         for c_idx, test_chunk in enumerate(chunks):
             if test_chunk.empty:
@@ -266,6 +281,12 @@ def walk_forward_vs_market(all_df):
 
 def main():
     all_df = pd.read_csv(DATA_PATH, parse_dates=["Date"])
+    if os.path.exists(LIVE_SEASON_PATH):
+        live_df = pd.read_csv(LIVE_SEASON_PATH, parse_dates=["Date"])
+        all_df = pd.concat([all_df, live_df[[c for c in all_df.columns if c in live_df.columns]]], ignore_index=True)
+    if all_df["Season"].nunique() <= WINDOW:
+        raise SystemExit(f"Need more than WINDOW={WINDOW} seasons to have a test season -- "
+                         f"run src/live/predict_round.py first to create {LIVE_SEASON_PATH}.")
     all_df = all_df.sort_values("Date").reset_index(drop=True)
     walk_forward_vs_market(all_df)
 

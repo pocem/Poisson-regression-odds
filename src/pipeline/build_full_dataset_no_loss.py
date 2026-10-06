@@ -61,6 +61,7 @@ from process_season_data import (
 from rebuild_rolling_as_ewma import TEAM_MAP, VENUE_ROLLING_COLS, TEAM_ROLLING_COLS
 from add_bookie_odds import build_odds_frame
 from add_bet365_odds import build_bet365_frame
+from compute_elo import compute_elo, seed_ratings
 
 # Trimmed to 23-24 onward for this project. Note: the processed CSVs in
 # data/processed were filtered from the original 14-15..25-26 build, so their
@@ -116,20 +117,10 @@ def build_base_matches():
 
 
 def add_elo(matches):
-    elo_df = pd.read_csv(ELO_FILE)
-    elo_df["QueryDate"] = pd.to_datetime(elo_df["QueryDate"]).dt.strftime("%Y-%m-%d")
-    elo_slim = elo_df[["team", "QueryDate", "elo"]]
-
-    matches = matches.merge(
-        elo_slim, left_on=["HomeTeam", "Date_str"], right_on=["team", "QueryDate"], how="left"
-    ).rename(columns={"elo": "Home_Elo"}).drop(columns=["team", "QueryDate"])
-
-    matches = matches.merge(
-        elo_slim, left_on=["AwayTeam", "Date_str"], right_on=["team", "QueryDate"], how="left"
-    ).rename(columns={"elo": "Away_Elo"}).drop(columns=["team", "QueryDate"])
-
-    matches["Elo_Difference"] = matches["Home_Elo"] - matches["Away_Elo"]
-    return matches
+    """Self-computed Elo (compute_elo.py): seeded once per team from ELO_FILE,
+    then updated from results."""
+    seeds = seed_ratings(matches, pd.read_csv(ELO_FILE))
+    return compute_elo(matches, seeds)
 
 
 def add_odds(matches):
