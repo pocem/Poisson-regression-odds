@@ -11,7 +11,7 @@ DATA_PATH = "data/processed/all_seasons_14window_ppg_full.csv"
 # Played matches of the live season, written by src/live/predict_round.py on every run.
 LIVE_SEASON_PATH = "data/processed/live_season.csv"
 WINDOW = 3
-N_CHUNKS = 38  # one chunk per round, retrained before each
+N_CHUNKS = 38  # one chunk per round -- for per-round scoring only; the model is frozen for the season
 MATCHES_PER_ROUND = 10
 
 HOME_COVARIATES = [
@@ -180,14 +180,15 @@ def walk_forward_vs_market(all_df):
         # that's only partly played still gets one chunk per round.
         chunks = [season_df.iloc[r:r + MATCHES_PER_ROUND] for r in range(0, len(season_df), MATCHES_PER_ROUND)]
 
+        # Frozen model: trained once on the WINDOW prior seasons, then used for
+        # every round of the test season without refitting. Only the features
+        # (Elo, xG, PPG, ...) carry the in-season information.
+        train_df = prior_df
+        model = PoissonRegressionGoalsMeanImpute().fit(train_df)
+
         for c_idx, test_chunk in enumerate(chunks):
             if test_chunk.empty:
                 continue
-            elapsed_chunks = pd.concat(chunks[:c_idx]) if c_idx > 0 else season_df.iloc[0:0]
-            train_df = pd.concat([prior_df, elapsed_chunks])
-
-            model = PoissonRegressionGoalsMeanImpute().fit(train_df)
-
             proba = model.predict_proba(test_chunk)
             classes_order = ["H", "D", "A"]
 
@@ -237,7 +238,7 @@ def walk_forward_vs_market(all_df):
                 "avg_ll": avg_ll.mean(),
             })
 
-        print(f"{test_season}: done ({len(chunks)} chunks, train grew {len(prior_df)} -> {len(prior_df) + len(season_df)})")
+        print(f"{test_season}: done ({len(chunks)} chunks, frozen model trained on {len(prior_df)} matches)")
 
     chunk_df = pd.DataFrame(chunk_rows)
 

@@ -4,7 +4,7 @@ Builds the static website (GitHub Pages) from the pipeline's outputs:
   - next round   latest logged predictions (data/predictions/predictions_log.csv)
                  + current bookmaker odds from football-data.co.uk/fixtures.csv
   - season       every played match: the live forecast logged before kickoff,
-                 or the walk-forward backtest if there was none, vs Bet365 and
+                 or the frozen-model backtest if there was none, vs Bet365 and
                  the bookmaker average (data/processed/live_season.csv)
   - Elo table    current self-computed ratings
   - status       outcome of the last pipeline run (data/predictions/last_run.json)
@@ -123,7 +123,7 @@ def next_round(log, fixtures, upcoming_odds):
 def season_matches(fixtures, log):
     """Every played match with the model's pre-match probabilities. Uses the
     latest live prediction logged before kickoff when there is one (a real
-    forecast), otherwise the walk-forward backtest."""
+    forecast), otherwise the frozen-model backtest."""
     bt = season_backtest(fixtures)
     live_fc = {}
     if not log.empty:
@@ -147,6 +147,7 @@ def season_matches(fixtures, log):
             "source": "live" if key in live_fc else "backtest",
             "p": [round(x, 4) for x in p], "odds": [round(1 / x, 2) for x in p],
             "b365": [num(x, 2) for x in b365], "avg": [num(x, 2) for x in avg],
+            "b365_fair": [round(1 / x, 2) for x in b365_f] if b365_f else [None] * 3,
             "pick": OUTCOMES[int(np.argmax(p))],
             "ll": {"model": -math.log(p[y]),
                    "b365": -math.log(b365_f[y]) if b365_f else None,

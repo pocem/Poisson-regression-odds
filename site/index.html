@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Premier League Odds Model</title>
-<meta name="description" content="Bivariate Poisson model odds for every Premier League match, retrained each round and compared with the bookmakers.">
+<meta name="description" content="Bivariate Poisson model odds for every Premier League match, from a model trained on the last three seasons and compared with the bookmakers.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232a78d6'/%3E%3Cpath d='M16 7l6 4.5-2.3 7h-7.4L10 11.5z' fill='%23fff'/%3E%3C/svg%3E">
 <style>
 :root {
@@ -184,12 +184,11 @@ details.more summary:focus-visible { outline: 2px solid var(--s1); outline-offse
 .note { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.filters select, .filters input {
+.filters select {
   font: inherit; font-size: 14px; color: var(--ink); background: var(--surface);
   border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; min-height: 34px;
 }
-.filters input { width: 180px; }
-.filters select:focus-visible, .filters input:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+.filters select:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
 .table-wrap { overflow-x: auto; }
 table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 table.data th {
@@ -225,8 +224,7 @@ footer p { margin: 6px 0; }
   h1 { font-size: 21px; }
   .games { grid-template-columns: 1fr; }
   .tile .value { font-size: 24px; }
-  .filters input { width: 100%; }
-  .filters select { flex: 1; }
+  .filters select { flex: 1; min-width: 0; }
 }
 </style>
 </head>
@@ -278,17 +276,17 @@ footer p { margin: 6px 0; }
 
   <section id="matches">
     <div class="section-head">
-      <div><h2>Every match</h2><p>Model odds are margin-free; bookmaker odds are as posted (they include the bookmaker's margin).</p></div>
+      <div><h2>Every match</h2><p>Both model and Bet365 odds are margin-free: Bet365's margin is removed proportionally so the two compare directly.</p></div>
       <div class="filters">
         <select id="roundFilter" aria-label="Filter by round"></select>
-        <input id="teamFilter" type="search" placeholder="Filter by team" aria-label="Filter by team">
+        <select id="teamFilter" aria-label="Filter by team"></select>
       </div>
     </div>
     <div class="card table-wrap">
       <table class="data">
         <thead><tr>
           <th>Rd</th><th>Date</th><th>Match</th><th class="num">Score</th>
-          <th class="num">Model H / D / A</th><th class="num">Bet365 H / D / A</th>
+          <th class="num">Model H / D / A</th><th class="num">Bet365 H / D / A<br><span style="font-weight:400">margin removed</span></th>
           <th>Pick</th><th class="num">Log loss<br>model</th><th class="num">Log loss<br>Bet365</th><th>Forecast</th>
         </tr></thead>
         <tbody id="matchRows"></tbody>
@@ -305,8 +303,8 @@ footer p { margin: 6px 0; }
   </section>
 
   <footer>
-    <p><strong>How it works.</strong> A bivariate Poisson regression predicts each side's goals from Elo, rolling xG and xGA, points per game and shots-on-target difference. Before every round it is retrained on the last three completed seasons plus all matches played so far this season, then turned into home / draw / away probabilities and scoreline odds.</p>
-    <p><strong>Forecast column.</strong> "Live" means the prediction was logged before kickoff; "backtest" means it was recreated afterwards using only data available before that round.</p>
+    <p><strong>How it works.</strong> A bivariate Poisson regression predicts each side's goals from Elo, rolling xG and xGA, points per game and shots-on-target difference. The model is trained once on the last three completed seasons and stays frozen for the whole season; each round only its inputs are updated with the latest results, so this season's form reaches it through Elo, xG, points per game and shots, not through refitting. Its goal predictions are turned into home / draw / away probabilities and scoreline odds.</p>
+    <p><strong>Forecast column.</strong> "Live" means the prediction was logged before kickoff; "backtest" means it was recreated afterwards with the same frozen model and only the data available before that match.</p>
     <p>Data: football-data.co.uk (results, stats, bookmaker odds), Understat (xG), fixturedownload.com (fixtures). Bookmaker probabilities have the margin removed proportionally.</p>
   </footer>
 </div>
@@ -339,7 +337,7 @@ footer p { margin: 6px 0; }
   });
 
   // ---------- header + status ----------
-  $("subtitle").textContent = `Season ${DATA.season} · bivariate Poisson, retrained every round on ${DATA.train_seasons.join(", ")} + this season`;
+  $("subtitle").textContent = `Season ${DATA.season} · bivariate Poisson model trained on ${DATA.train_seasons.join(", ")}, frozen for the season; inputs updated every round`;
   $("updated").textContent = `Updated ${DATA.generated_uk} UK`;
   const st = DATA.status;
   if (st) {
@@ -496,10 +494,12 @@ footer p { margin: 6px 0; }
   // ---------- match table ----------
   const rounds = [...new Set(DATA.matches.map((m) => m.round))].sort((a, b) => b - a);
   $("roundFilter").innerHTML = `<option value="">All rounds</option>` + rounds.map((r) => `<option value="${r}">Round ${r}</option>`).join("");
+  const teams = [...new Set(DATA.matches.flatMap((m) => [m.home, m.away]))].sort((a, b) => a.localeCompare(b));
+  $("teamFilter").innerHTML = `<option value="">All teams</option>` + teams.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
   function renderMatches() {
-    const rf = $("roundFilter").value, tf = $("teamFilter").value.trim().toLowerCase();
+    const rf = $("roundFilter").value, tf = $("teamFilter").value;
     const rows = DATA.matches
-      .filter((m) => (!rf || m.round === +rf) && (!tf || (m.home + " " + m.away).toLowerCase().includes(tf)))
+      .filter((m) => (!rf || m.round === +rf) && (!tf || m.home === tf || m.away === tf))
       .sort((a, b) => b.round - a.round || a.kickoff.localeCompare(b.kickoff));
     const triple = (arr, hl) => arr.map((v, i) => `<span class="${OUT[i] === hl ? "hl" : "dim"}">${odd(v)}</span>`).join(" / ");
     $("matchRows").innerHTML = rows.length ? rows.map((m) => {
@@ -509,7 +509,7 @@ footer p { margin: 6px 0; }
         <td>${esc(m.home)} – ${esc(m.away)}</td>
         <td class="num"><b>${m.score[0]}–${m.score[1]}</b></td>
         <td class="num">${triple(m.odds, m.result)}</td>
-        <td class="num">${triple(m.b365, m.result)}</td>
+        <td class="num">${triple(m.b365_fair, m.result)}</td>
         <td>${m.pick === m.result ? `<span class="mark-ok" title="Model's favourite won">✓</span>` : `<span class="mark-no" title="Model's favourite lost">✗</span>`} ${m.pick}</td>
         <td class="num ${better ? "better-cell" : ""}">${f3(m.ll.model)}</td>
         <td class="num">${f3(m.ll.b365)}</td>
@@ -517,7 +517,7 @@ footer p { margin: 6px 0; }
     }).join("") : `<tr><td colspan="10" class="dim">No matches.</td></tr>`;
   }
   $("roundFilter").addEventListener("change", renderMatches);
-  $("teamFilter").addEventListener("input", renderMatches);
+  $("teamFilter").addEventListener("change", renderMatches);
   renderMatches();
 
   // ---------- Elo ----------

@@ -1,7 +1,8 @@
 """
-Walk-forward backtest of the live season, exactly as the live pipeline runs:
-before each round the model is retrained on the WINDOW completed seasons +
-every earlier round of the live season, then predicts that round.
+Backtest of the live season, exactly as the live pipeline runs: the model is
+frozen -- trained once on the WINDOW completed seasons -- and predicts every
+round with that same fit. Each match's features (Elo, xG, PPG, ...) only use
+data from before that match, so nothing is known in hindsight.
 
     python src/live/backtest.py     # writes data/predictions/{season}_model_odds.csv
 """
@@ -22,7 +23,7 @@ from compute_elo import completed_seasons  # noqa: E402
 
 def season_backtest(fixtures, history_seasons=None):
     """One row per played live-season match: match info, result, bookmaker
-    odds, and the model's H/D/A probabilities from the walk-forward."""
+    odds, and the frozen model's H/D/A probabilities."""
     history_seasons = history_seasons or completed_seasons()
     hist = pd.read_csv(PROCESSED_FILE, parse_dates=["Date"])
     prior = hist[hist["Season"].isin(history_seasons[-WINDOW:])]
@@ -33,13 +34,9 @@ def season_backtest(fixtures, history_seasons=None):
     if not missing.empty:
         raise ValueError(f"played matches not in the fixture feed: {missing[['HomeTeam', 'AwayTeam']].values.tolist()}")
 
-    frames = []
-    for rnd in sorted(live["RoundNumber"].unique()):
-        test = live[live["RoundNumber"] == rnd].copy()
-        model = PoissonRegressionGoalsMeanImpute().fit(pd.concat([prior, live[live["RoundNumber"] < rnd]]))
-        test[["p_home", "p_draw", "p_away"]] = model.predict_proba(test)
-        frames.append(test)
-    return pd.concat(frames, ignore_index=True).sort_values(["RoundNumber", "Kickoff"])
+    model = PoissonRegressionGoalsMeanImpute().fit(prior)
+    live[["p_home", "p_draw", "p_away"]] = model.predict_proba(live)
+    return live.sort_values(["RoundNumber", "Kickoff"]).reset_index(drop=True)
 
 
 def main():

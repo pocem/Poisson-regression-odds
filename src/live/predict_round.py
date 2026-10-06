@@ -5,11 +5,12 @@ Round-by-round odds maker. Every run:
   2. recomputes Elo for every match from each team's seed rating
      (src/pipeline/compute_elo.py -- ClubElo is only contacted to seed a team
      we have no rating for) and rebuilds features for the live season (features.py),
-  3. retrains the bivariate Poisson model from scratch on the 3 most recent
-     completed seasons (WINDOW = 3) + every live-season match played so far
-     -- i.e. the intra-season walk-forward with one chunk per round
-     (N_CHUNKS = 38) instead of 5,
-  4. predicts the next round and appends it to data/predictions/predictions_log.csv.
+  3. predicts the next round with the FROZEN bivariate Poisson model -- trained
+     once on the 3 most recent completed seasons (WINDOW = 3) and saved in
+     data/models/; it is not refit during the season. Only the features (Elo,
+     xG, form, PPG) move from round to round. The saved model is refit only
+     when its training data changes (new season, or an edited manual Elo seed),
+  4. appends the predictions to data/predictions/predictions_log.csv.
 
 Usage, from anywhere:
     python src/live/predict_round.py              # next upcoming round (+ rearranged games before it)
@@ -64,6 +65,7 @@ PROCESSED_FILE = os.path.join(ROOT, "data", "processed", "all_seasons_14window_p
 # Played live-season matches with features + bookmaker odds, rewritten every
 # run -- Bivariate_Poisson.py appends it to the history to evaluate round by round.
 LIVE_SEASON_FILE = os.path.join(ROOT, "data", "processed", "live_season.csv")
+MODEL_DIR = os.path.join(ROOT, "data", "models")
 LOG_CSV = os.path.join(ROOT, "data", "predictions", "predictions_log.csv")
 # Outcome of the latest run (predicted / not ready / unchanged ...), shown on the site.
 STATUS_JSON = os.path.join(ROOT, "data", "predictions", "last_run.json")
@@ -159,6 +161,44 @@ def training_history(train_seasons, history_seasons, elo_seeds):
         rebuilt, _ = build_live_frames(prior, season, played, played.iloc[0:0], elo_seeds)
         hist = pd.concat([hist, rebuilt], ignore_index=True)
     return hist
+
+
+def frozen_model(train_df, train_seasons):
+    """The season's frozen model: loaded from data/models/ if it was trained on
+    exactly this data, otherwise trained now and saved. Returns (model, meta)."""
+    cols = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG"] + list(dict.fromkeys(HOME_COVARIATES + AWAY_COVARIATES))
+    fingerprint = hashlib.sha1(train_df[cols].to_csv(index=False).encode()).hexdigest()[:12]
+    name = f"bivariate_poisson_{train_seasons[0]}_to_{train_seasons[-1]}"
+    npz_path, meta_path = os.path.join(MODEL_DIR, name + ".npz"), os.path.join(MODEL_DIR, name + ".json")
+
+    if os.path.exists(meta_path) and os.path.exists(npz_path):
+        with open(meta_path, encoding="utf-8") as f:
+            meta = json.load(f)
+        if meta.get("training_fingerprint") == fingerprint:
+            npz = np.load(npz_path)
+            model = PoissonRegressionGoalsMeanImpute()
+            for k in ["beta_home", "beta_away", "home_mean", "home_std", "away_mean", "away_std"]:
+                setattr(model, k, npz[k])
+            model.home_adv, model.theta = float(npz["home_adv"]), float(npz["theta"])
+            print(f"Using frozen model {name} (trained {meta['trained_at']} on {meta['n_train']} matches)")
+            return model, meta
+        print(f"Training data for {name} changed since it was saved -- retraining.")
+
+    print(f"Training frozen model on {len(train_df)} matches ({train_seasons[0]}..{train_seasons[-1]})...")
+    model = PoissonRegressionGoalsMeanImpute().fit(train_df)
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    np.savez(npz_path, beta_home=model.beta_home, beta_away=model.beta_away,
+             home_adv=model.home_adv, theta=model.theta,
+             home_mean=model.home_mean, home_std=model.home_std,
+             away_mean=model.away_mean, away_std=model.away_std)
+    meta = {"model": name, "train_seasons": list(train_seasons), "n_train": len(train_df),
+            "training_fingerprint": fingerprint,
+            "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "home_adv": round(model.home_adv, 6), "theta": round(model.theta, 6)}
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2)
+    print(f"  saved to {os.path.relpath(npz_path, ROOT)}")
+    return model, meta
 
 
 def save_live_season(played_rows, current_season):
@@ -276,7 +316,13 @@ def main():
         print(f"Round {round_no} has no unplayed fixtures -- nothing to predict.")
         write_status("nothing_to_predict", f"Round {round_no} has no unplayed fixtures.", round=round_no)
         return
-    signature = input_signature(played, xg)
+    train_df = training_history(train_seasons, history_seasons, elo_seeds)
+    model, model_meta = frozen_model(train_df, train_seasons)
+    print(f"  home_adv={model.home_adv:.4f}  theta={model.theta:.4f}  "
+          f"({len(played_rows)} {current_season} matches feed the features, not the fit)")
+
+    # Same inputs AND same model -> same predictions, nothing new to log.
+    signature = input_signature(played, xg) + "-" + model_meta["training_fingerprint"][:6]
     if args.skip_if_unchanged and already_predicted(upcoming, signature):
         print(f"Round {round_no} already predicted from these exact inputs -- nothing new to log.")
         write_status("unchanged", f"Round {round_no} already predicted from the latest data.", round=round_no)
@@ -285,15 +331,6 @@ def main():
     if not extra.empty:
         print(f"Also predicting {len(extra)} fixture(s) from other rounds kicking off before round {round_no} ends: "
               + ", ".join(f"{r.HomeTeam} v {r.AwayTeam} (round {r.RoundNumber})" for r in extra.itertuples()))
-    train_df = pd.concat(
-        [training_history(train_seasons, history_seasons, elo_seeds), played_rows], ignore_index=True,
-    )
-
-    print(f"\nRetraining on {len(train_df)} matches "
-          f"({len(train_df) - len(played_rows)} from {train_seasons[0]}..{train_seasons[-1]}, "
-          f"{len(played_rows)} from {current_season})...")
-    model = PoissonRegressionGoalsMeanImpute().fit(train_df)
-    print(f"  home_adv={model.home_adv:.4f}  theta={model.theta:.4f}")
 
     missing = predict_df[HOME_COVARIATES + AWAY_COVARIATES].isna().sum()
     if missing.any():
@@ -320,6 +357,8 @@ def main():
             "lambda_home": round(lam1[i], 4), "lambda_away": round(lam2[i], 4), "lambda_shared": round(lam3, 4),
             "home_elo": fx.Home_Elo, "away_elo": fx.Away_Elo,
             "n_train": len(train_df),
+            "model": model_meta["model"],
+            "model_trained_at": model_meta["trained_at"],
             "n_current_season_played": len(played_rows),
             "data_signature": signature,
             "scoreline_fair_odds_json": json.dumps({

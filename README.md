@@ -11,9 +11,11 @@ the fixture feed already shows, or if team names don't line up across sources --
 predict from features a round out of date. football-data.co.uk usually lags results by a day or two.
 
 Each run pulls fresh fixtures (fixturedownload.com), match stats (football-data.co.uk) and
-xG (Understat), recomputes Elo, rebuilds features, retrains the bivariate Poisson model
-on the last 3 completed seasons + every current-season match played so far, and appends
-the round's probabilities and fair odds to `data/predictions/predictions_log.csv`.
+xG (Understat), recomputes Elo and rebuilds the features, then predicts with the frozen
+bivariate Poisson model -- trained once on the last 3 completed seasons and saved in
+`data/models/`, not refit during the season -- and appends the round's probabilities and fair
+odds to `data/predictions/predictions_log.csv`. The model is refit only when its training data
+changes (a new season, or an edited manual Elo seed).
 
 After a season ends, save its final football-data.co.uk file as `data/raw/pl{season}.csv`
 (e.g. `pl26-27.csv`); the pipeline then moves on to the next season automatically.
@@ -33,7 +35,7 @@ and publishes a static page to GitHub Pages with:
 - the next round's probabilities, fair odds, likeliest scorelines and expected goals,
   next to Bet365 and the bookmaker average once they're posted, with the model's edge;
 - season performance against Bet365 (log loss, Brier score, favourite-won rate, log loss by round);
-- every played match with model and Bet365 odds, the result and each forecaster's log loss;
+- every played match with model and Bet365 odds (margin removed), the result and each forecaster's log loss;
 - the current Elo table.
 
 A run only logs new predictions when the inputs changed (`--skip-if-unchanged`), and a

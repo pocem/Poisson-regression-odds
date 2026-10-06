@@ -1,0 +1,13 @@
+{
+  "model": "bivariate_poisson_23-24_to_25-26",
+  "train_seasons": [
+    "23-24",
+    "24-25",
+    "25-26"
+  ],
+  "n_train": 1140,
+  "training_fingerprint": "5faeb46fc234",
+  "trained_at": "2026-10-06T12:26:37+00:00",
+  "home_adv": 0.29758,
+  "theta": -1.624346
+}
