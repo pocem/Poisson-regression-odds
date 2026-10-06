@@ -6,8 +6,8 @@
     "25-26"
   ],
   "n_train": 1140,
-  "training_fingerprint": "5faeb46fc234",
-  "trained_at": "2026-10-06T12:26:37+00:00",
+  "training_fingerprint": "957dc49c0e84",
+  "trained_at": "2026-10-06T12:32:06+00:00",
   "home_adv": 0.29758,
-  "theta": -1.624346
+  "theta": -1.624347
 }
