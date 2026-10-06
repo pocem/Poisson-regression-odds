@@ -54,7 +54,6 @@ from sources import (  # noqa: E402
 )
 from features import build_live_frames  # noqa: E402
 from process_season_data import load_data  # noqa: E402
-from add_bookie_odds import build_odds_frame  # noqa: E402
 from add_bet365_odds import build_bet365_frame  # noqa: E402
 from compute_elo import (  # noqa: E402
     MANUAL_SEEDS_FILE, completed_seasons, load_history_matches, seed_ratings, refresh_processed_elo,
@@ -167,7 +166,7 @@ def frozen_model(train_df, train_seasons):
     """The season's frozen model: loaded from data/models/ if it was trained on
     exactly this data, otherwise trained now and saved. Returns (model, meta)."""
     cols = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG"] + list(dict.fromkeys(HOME_COVARIATES + AWAY_COVARIATES))
-    fingerprint = hashlib.sha1(train_df[cols].to_csv(index=False).encode()).hexdigest()[:12]
+    fingerprint = hashlib.sha1(_stable_csv(train_df[cols])).hexdigest()[:12]
     name = f"bivariate_poisson_{train_seasons[0]}_to_{train_seasons[-1]}"
     npz_path, meta_path = os.path.join(MODEL_DIR, name + ".npz"), os.path.join(MODEL_DIR, name + ".json")
 
@@ -203,9 +202,7 @@ def frozen_model(train_df, train_seasons):
 
 def save_live_season(played_rows, current_season):
     raw_path = os.path.join(RAW_DIR, f"pl{current_season}_live.csv")
-    out = (played_rows
-           .merge(build_odds_frame(raw_path), on=["Date", "HomeTeam", "AwayTeam"], how="left")
-           .merge(build_bet365_frame(raw_path), on=["Date", "HomeTeam", "AwayTeam"], how="left"))
+    out = played_rows.merge(build_bet365_frame(raw_path), on=["Date", "HomeTeam", "AwayTeam"], how="left")
     out[DATASET_COLUMNS].to_csv(LIVE_SEASON_FILE, index=False)
     print(f"  Saved {len(out)} played {current_season} matches to {os.path.relpath(LIVE_SEASON_FILE, ROOT)}")
 
@@ -236,13 +233,19 @@ def write_status(status, message, **extra):
                    "status": status, "message": message, **extra}, f, indent=2)
 
 
+def _stable_csv(df):
+    """CSV bytes that are identical on every machine: fixed line endings
+    (pandas writes CRLF on Windows, LF on Linux) and rounded floats."""
+    return df.round(6).to_csv(index=False, lineterminator="\n").encode()
+
+
 def input_signature(played, xg):
     """Fingerprint of everything a prediction depends on that can change during
     the season: results + match stats, xG, and the manual Elo seeds."""
     h = hashlib.sha1()
     if played is not None:
-        h.update(played.sort_values(["Date", "HomeTeam"]).to_csv(index=False).encode())
-    h.update(xg.sort_values(["Team", "Date_str"]).to_csv(index=False).encode())
+        h.update(_stable_csv(played.sort_values(["Date", "HomeTeam"])))
+    h.update(_stable_csv(xg.sort_values(["Team", "Date_str"])))
     with open(MANUAL_SEEDS_FILE, "rb") as f:
         h.update(f.read())
     return h.hexdigest()[:12]

@@ -49,7 +49,6 @@ def main():
         "odds_home": (1 / bt["p_home"]).round(2), "odds_draw": (1 / bt["p_draw"]).round(2),
         "odds_away": (1 / bt["p_away"]).round(2),
         "b365_home": bt["B365HomeOdds"], "b365_draw": bt["B365DrawOdds"], "b365_away": bt["B365AwayOdds"],
-        "avg_home": bt["AvgHomeOdds"], "avg_draw": bt["AvgDrawOdds"], "avg_away": bt["AvgAwayOdds"],
         "home_goals": bt["FTHG"], "away_goals": bt["FTAG"], "result": bt["FTR"],
     })
     path = os.path.join(ROOT, "data", "predictions", f"{season}_model_odds.csv")

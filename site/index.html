@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Premier League Odds Model</title>
-<meta name="description" content="Bivariate Poisson model odds for every Premier League match, from a model trained on the last three seasons and compared with the bookmakers.">
+<title>Poisson Regression Football Odds</title>
+<meta name="description" content="Bivariate Poisson model odds for every Premier League match, from a model trained on the last three seasons and compared with Bet365.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232a78d6'/%3E%3Cpath d='M16 7l6 4.5-2.3 7h-7.4L10 11.5z' fill='%23fff'/%3E%3C/svg%3E">
 <style>
 :root {
@@ -20,7 +20,6 @@
   --border: rgba(11, 11, 11, 0.10);
   --s1: #2a78d6;   /* model / home */
   --s2: #eb6834;   /* Bet365 / away */
-  --s3: #1baf7a;   /* bookmaker average */
   --draw: #c3c2b7; /* draw: neutral */
   --good: #006300;
   --bad: #b42d2d;
@@ -44,7 +43,6 @@
     --border: rgba(255, 255, 255, 0.10);
     --s1: #3987e5;
     --s2: #d95926;
-    --s3: #199e70;
     --draw: #5b5a55;
     --good: #3fbf3f;
     --bad: #ef7b7b;
@@ -68,7 +66,6 @@
   --border: rgba(255, 255, 255, 0.10);
   --s1: #3987e5;
   --s2: #d95926;
-  --s3: #199e70;
   --draw: #5b5a55;
   --good: #3fbf3f;
   --bad: #ef7b7b;
@@ -232,7 +229,7 @@ footer p { margin: 6px 0; }
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Premier League odds model</h1>
+      <h1>Poisson regression football odds</h1>
       <p class="sub" id="subtitle"></p>
     </div>
     <div class="meta"><span id="updated"></span> &nbsp;<button class="theme-toggle" id="themeBtn" type="button">Theme</button></div>
@@ -258,7 +255,7 @@ footer p { margin: 6px 0; }
       <div class="chart-top">
         <div>
           <strong style="font-size:14px">Log loss by round</strong>
-          <div class="meta">Lower is better. How surprised each forecaster was by the actual results.</div>
+          <div class="meta">Lower is better. How surprised the model and Bet365 were by the actual results.</div>
         </div>
         <div class="seg" role="group" aria-label="Chart mode">
           <button type="button" data-mode="per" aria-pressed="true">Per round</button>
@@ -268,7 +265,6 @@ footer p { margin: 6px 0; }
       <div class="legend" style="margin-top:10px">
         <span><i style="background:var(--s1)"></i>Model</span>
         <span><i style="background:var(--s2)"></i>Bet365</span>
-        <span><i style="background:var(--s3)"></i>Bookmaker average</span>
       </div>
       <div class="chart" id="chart"><div class="tooltip" id="tooltip"></div></div>
     </div>
@@ -305,7 +301,7 @@ footer p { margin: 6px 0; }
   <footer>
     <p><strong>How it works.</strong> A bivariate Poisson regression predicts each side's goals from Elo, rolling xG and xGA, points per game and shots-on-target difference. The model is trained once on the last three completed seasons and stays frozen for the whole season; each round only its inputs are updated with the latest results, so this season's form reaches it through Elo, xG, points per game and shots, not through refitting. Its goal predictions are turned into home / draw / away probabilities and scoreline odds.</p>
     <p><strong>Forecast column.</strong> "Live" means the prediction was logged before kickoff; "backtest" means it was recreated afterwards with the same frozen model and only the data available before that match.</p>
-    <p>Data: football-data.co.uk (results, stats, bookmaker odds), Understat (xG), fixturedownload.com (fixtures). Bookmaker probabilities have the margin removed proportionally.</p>
+    <p>Data: football-data.co.uk (results, stats, Bet365 odds), Understat (xG), fixturedownload.com (fixtures). Bet365's margin is removed proportionally, so its odds and probabilities compare directly with the model's.</p>
   </footer>
 </div>
 
@@ -357,15 +353,14 @@ footer p { margin: 6px 0; }
     $("games").innerHTML = `<div class="card empty">No upcoming predictions yet — they appear once the pipeline has run with the latest results.</div>`;
   } else {
     $("nextTitle").textContent = `Round ${nx.round}`;
-    const anyBook = nx.games.some((g) => g.book);
+    const anyBook = nx.games.some((g) => g.b365);
     $("nextSub").textContent = `Predicted ${new Date(nx.predicted_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. ` +
-      (anyBook ? "Edge = model probability minus the bookmakers' margin-free average." : "Bookmaker odds appear here once football-data.co.uk posts them (Fridays for weekend rounds).");
+      (anyBook ? "Bet365 odds shown with the margin removed. Edge = model probability minus Bet365's." : "Bet365 odds appear here once football-data.co.uk posts them (Fridays for weekend rounds).");
     $("games").innerHTML = nx.games.map((g) => {
       const extra = g.round !== nx.round ? ` · rearranged from round ${g.round}` : "";
-      const book = g.book ? `<div class="book"><table>
+      const book = g.b365 ? `<div class="book"><table>
           <tr><td></td><td>Home</td><td>Draw</td><td>Away</td></tr>
-          <tr><td>Bet365</td>${g.book.b365.map((o) => `<td>${odd(o)}</td>`).join("")}</tr>
-          <tr><td>Bookmaker avg</td>${g.book.avg.map((o) => `<td>${odd(o)}</td>`).join("")}</tr>
+          <tr><td>Bet365</td>${g.b365_fair.map((o) => `<td>${odd(o)}</td>`).join("")}</tr>
           <tr><td>Edge</td>${g.edge.map((e) => `<td class="${e > 0 ? "edge-pos" : "edge-neg"}">${e > 0 ? "▲ +" : ""}${(e * 100).toFixed(1)} pp</td>`).join("")}</tr>
         </table></div>` : "";
       return `<article class="card game">
@@ -412,7 +407,6 @@ footer p { margin: 6px 0; }
   const SERIES = [
     { key: "model", name: "Model", color: "--s1" },
     { key: "b365", name: "Bet365", color: "--s2" },
-    { key: "avg", name: "Bookmaker average", color: "--s3" },
   ];
   document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
     mode = b.dataset.mode;
@@ -445,7 +439,7 @@ footer p { margin: 6px 0; }
     const svg = document.createElementNS(ns, "svg");
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", "Log loss by round for the model, Bet365 and the bookmaker average. The same values are in the match table.");
+    svg.setAttribute("aria-label", "Log loss by round for the model and Bet365. The same values are in the match table.");
     let g = "";
     ticks.forEach((t) => {
       g += `<line class="${t === y0 ? "baseline" : "gridline"}" x1="${M.l}" x2="${W - M.r}" y1="${y(t)}" y2="${y(t)}"/>`;

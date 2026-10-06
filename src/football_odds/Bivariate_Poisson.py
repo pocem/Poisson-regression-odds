@@ -24,11 +24,11 @@ AWAY_COVARIATES = [
 ]
 
 # Everything the datasets keep: match identifiers, targets, the covariates
-# above, and the bookmaker odds walk_forward_vs_market() compares against.
+# above, and the Bet365 odds walk_forward_vs_bet365() compares against.
 DATASET_COLUMNS = (
     ["Date", "Time", "HomeTeam", "AwayTeam", "Season", "FTHG", "FTAG", "FTR"]
     + list(dict.fromkeys(HOME_COVARIATES + AWAY_COVARIATES))
-    + ["B365HomeOdds", "B365DrawOdds", "B365AwayOdds", "AvgHomeOdds", "AvgDrawOdds", "AvgAwayOdds"]
+    + ["B365HomeOdds", "B365DrawOdds", "B365AwayOdds"]
 )
 
 
@@ -161,13 +161,13 @@ def report_comparison(metric_name, model_arr, baseline_arr, baseline_name):
     )
 
 
-def walk_forward_vs_market(all_df):
+def walk_forward_vs_bet365(all_df):
     seasons = sorted(all_df["Season"].unique())
 
     chunk_rows = []
-    all_model_ll, all_b365_ll, all_avg_ll = [], [], []
-    all_model_brier, all_b365_brier, all_avg_brier = [], [], []
-    all_model_correct = []
+    all_model_ll, all_b365_ll = [], []
+    all_model_brier, all_b365_brier = [], []
+    all_model_correct, all_b365_correct = [], []
     per_chunk_idx_ll = {i: [] for i in range(N_CHUNKS + 1)}
 
     for i in range(WINDOW, len(seasons)):
@@ -199,33 +199,24 @@ def walk_forward_vs_market(all_df):
                 ((1 / test_chunk["B365AwayOdds"]) / b365_overround).values,
             ])
 
-            avg_overround = 1 / test_chunk["AvgHomeOdds"] + 1 / test_chunk["AvgDrawOdds"] + 1 / test_chunk["AvgAwayOdds"]
-            fair_avg = np.column_stack([
-                ((1 / test_chunk["AvgHomeOdds"]) / avg_overround).values,
-                ((1 / test_chunk["AvgDrawOdds"]) / avg_overround).values,
-                ((1 / test_chunk["AvgAwayOdds"]) / avg_overround).values,
-            ])
-
             y_true = test_chunk["FTR"].values
             y_onehot = label_binarize(y_true, classes=classes_order)
 
             eps = 1e-15
             model_ll = -np.log(np.clip((proba * y_onehot).sum(axis=1), eps, 1))
             b365_ll = -np.log(np.clip((fair_b365 * y_onehot).sum(axis=1), eps, 1))
-            avg_ll = -np.log(np.clip((fair_avg * y_onehot).sum(axis=1), eps, 1))
             model_brier = ((proba - y_onehot) ** 2).sum(axis=1)
             b365_brier = ((fair_b365 - y_onehot) ** 2).sum(axis=1)
-            avg_brier = ((fair_avg - y_onehot) ** 2).sum(axis=1)
             model_pred = np.array(classes_order)[proba.argmax(axis=1)]
             model_correct = (model_pred == y_true)
+            b365_correct = (np.array(classes_order)[fair_b365.argmax(axis=1)] == y_true)
 
             all_model_ll.append(model_ll)
             all_b365_ll.append(b365_ll)
-            all_avg_ll.append(avg_ll)
             all_model_brier.append(model_brier)
             all_b365_brier.append(b365_brier)
-            all_avg_brier.append(avg_brier)
             all_model_correct.append(model_correct)
+            all_b365_correct.append(b365_correct)
             per_chunk_idx_ll[c_idx].append(model_ll.mean())
 
             chunk_rows.append({
@@ -235,7 +226,6 @@ def walk_forward_vs_market(all_df):
                 "n_test": len(test_chunk),
                 "model_ll": model_ll.mean(),
                 "bet365_ll": b365_ll.mean(),
-                "avg_ll": avg_ll.mean(),
             })
 
         print(f"{test_season}: done ({len(chunks)} chunks, frozen model trained on {len(prior_df)} matches)")
@@ -250,20 +240,18 @@ def walk_forward_vs_market(all_df):
 
     model_ll_all = np.concatenate(all_model_ll)
     b365_ll_all = np.concatenate(all_b365_ll)
-    avg_ll_all = np.concatenate(all_avg_ll)
     model_brier_all = np.concatenate(all_model_brier)
     b365_brier_all = np.concatenate(all_b365_brier)
-    avg_brier_all = np.concatenate(all_avg_brier)
     model_correct_all = np.concatenate(all_model_correct)
+    b365_correct_all = np.concatenate(all_b365_correct)
 
     print(f"\n=== Pooled across all {len(chunk_df)} chunks ({len(model_ll_all)} test matches) ===")
-    print(f"Model log loss:      {model_ll_all.mean():.4f}")
-    print(f"Bet365 log loss:     {b365_ll_all.mean():.4f}")
-    print(f"Avg-bookie log loss: {avg_ll_all.mean():.4f}")
-    print(f"Model Brier:         {model_brier_all.mean():.4f}")
-    print(f"Bet365 Brier:        {b365_brier_all.mean():.4f}")
-    print(f"Avg-bookie Brier:    {avg_brier_all.mean():.4f}")
-    print(f"Model accuracy (1X2): {model_correct_all.mean():.4f}")
+    print(f"Model log loss:        {model_ll_all.mean():.4f}")
+    print(f"Bet365 log loss:       {b365_ll_all.mean():.4f}")
+    print(f"Model Brier:           {model_brier_all.mean():.4f}")
+    print(f"Bet365 Brier:          {b365_brier_all.mean():.4f}")
+    print(f"Model accuracy (1X2):  {model_correct_all.mean():.4f}")
+    print(f"Bet365 accuracy (1X2): {b365_correct_all.mean():.4f}")
 
     print(
         "\n(Compare against Poisson_Covariates_Bivariate.py's reported result: "
@@ -273,11 +261,9 @@ def walk_forward_vs_market(all_df):
 
     print("\n--- Log loss ---")
     report_comparison("log loss", model_ll_all, b365_ll_all, "Bet365")
-    report_comparison("log loss", model_ll_all, avg_ll_all, "avg-bookie")
 
     print("\n--- Brier score ---")
     report_comparison("Brier", model_brier_all, b365_brier_all, "Bet365")
-    report_comparison("Brier", model_brier_all, avg_brier_all, "avg-bookie")
 
 
 def main():
@@ -289,7 +275,7 @@ def main():
         raise SystemExit(f"Need more than WINDOW={WINDOW} seasons to have a test season -- "
                          f"run src/live/predict_round.py first to create {LIVE_SEASON_PATH}.")
     all_df = all_df.sort_values("Date").reset_index(drop=True)
-    walk_forward_vs_market(all_df)
+    walk_forward_vs_bet365(all_df)
 
 
 if __name__ == "__main__":

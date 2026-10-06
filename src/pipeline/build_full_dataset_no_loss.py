@@ -59,7 +59,6 @@ from process_season_data import (
     create_team_df,
 )
 from rebuild_rolling_as_ewma import TEAM_MAP, VENUE_ROLLING_COLS, TEAM_ROLLING_COLS
-from add_bookie_odds import build_odds_frame
 from add_bet365_odds import build_bet365_frame
 from compute_elo import compute_elo, seed_ratings
 
@@ -124,10 +123,6 @@ def add_elo(matches):
 
 
 def add_odds(matches):
-    odds_frames = [build_odds_frame(f"data/raw/pl{s}.csv") for s in SEASONS]
-    odds_df = pd.concat(odds_frames, ignore_index=True)
-    matches = matches.merge(odds_df, on=["Date", "HomeTeam", "AwayTeam"], how="left")
-
     bet365_frames = [build_bet365_frame(f"data/raw/pl{s}.csv") for s in SEASONS]
     bet365 = pd.concat(bet365_frames, ignore_index=True)
     matches = matches.merge(bet365, on=["Date", "HomeTeam", "AwayTeam"], how="left")
