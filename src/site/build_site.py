@@ -9,8 +9,11 @@ Builds the static website (GitHub Pages) from the pipeline's outputs:
   - Elo table    current self-computed ratings
   - status       outcome of the last pipeline run (data/predictions/last_run.json)
 
-Writes one self-contained page, _site/index.html (data embedded, no server
-needed -- open it straight from disk to preview):
+Fills the template next to this script (page_template.html -- the page's
+source: layout, styling, charts) with the data, and writes the finished,
+self-contained page to generated_site/index.html. That folder is build output:
+safe to delete, never committed, rebuilt on every run. Open the file straight
+from disk to preview:
 
     python src/site/build_site.py
 """
@@ -34,8 +37,8 @@ from backtest import season_backtest  # noqa: E402
 from compute_elo import completed_seasons, load_history_matches, seed_ratings, compute_elo  # noqa: E402
 from process_season_data import load_data  # noqa: E402
 
-TEMPLATE = os.path.join(ROOT, "site", "index.html")
-OUT_DIR = os.path.join(ROOT, "_site")
+TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "page_template.html")
+OUT_DIR = os.path.join(ROOT, "generated_site")
 UPCOMING_ODDS_URL = "https://www.football-data.co.uk/fixtures.csv"
 UPCOMING_ODDS_CACHE = os.path.join(CACHE_DIR, "upcoming_odds.csv")
 OUTCOMES = ["H", "D", "A"]

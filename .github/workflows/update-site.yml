@@ -8,7 +8,6 @@ on:
   push:
     branches: [main]
     paths:
-      - "site/**"
       - "src/**"
       - ".github/workflows/update-site.yml"
 
@@ -66,7 +65,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: generated_site
 
   deploy:
     needs: update

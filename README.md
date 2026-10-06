@@ -41,5 +41,9 @@ and publishes a static page to GitHub Pages with:
 A run only logs new predictions when the inputs changed (`--skip-if-unchanged`), and a
 "data not ready" stop is reported on the page rather than failing the workflow.
 
-Preview locally: `python src/site/build_site.py`, then open `_site/index.html`.
+The page's source is `src/site/page_template.html` (layout, styling, charts); edit that to change
+the site. `src/site/build_site.py` fills it with the data and writes the finished page to
+`generated_site/index.html` -- build output that is never committed and safe to delete.
+
+Preview locally: `python src/site/build_site.py`, then open `generated_site/index.html`.
 One-time setup on GitHub: Settings → Pages → Source: **GitHub Actions**.
