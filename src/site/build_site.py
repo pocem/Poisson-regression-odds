@@ -22,6 +22,7 @@ import io
 import json
 import math
 import os
+import shutil
 import sys
 from datetime import datetime, timezone
 
@@ -38,6 +39,8 @@ from compute_elo import completed_seasons, load_history_matches, seed_ratings, c
 from process_season_data import load_data  # noqa: E402
 
 TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "page_template.html")
+# Site icon: football (soccer ball) by flomar, CC0 / public domain, via Wikimedia Commons.
+FAVICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.svg")
 OUT_DIR = os.path.join(ROOT, "generated_site")
 UPCOMING_ODDS_URL = "https://www.football-data.co.uk/fixtures.csv"
 UPCOMING_ODDS_CACHE = os.path.join(CACHE_DIR, "upcoming_odds.csv")
@@ -215,6 +218,7 @@ def main():
     out = os.path.join(OUT_DIR, "index.html")
     with open(out, "w", encoding="utf-8") as f:
         f.write(html.replace("__DATA_JSON__", payload))
+    shutil.copy(FAVICON, os.path.join(OUT_DIR, "favicon.svg"))
     print(f"Built {os.path.relpath(out, ROOT)}: {len(matches)} played matches, "
           f"next round {data['next']['round'] if data['next'] else '-'}")
 
