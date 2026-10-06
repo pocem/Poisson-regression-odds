@@ -5,3 +5,4 @@ venv/
 live_odds_env/
 .env
 .streamlit/secrets.toml
+_site/

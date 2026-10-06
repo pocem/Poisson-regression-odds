@@ -157,6 +157,7 @@ def compute_elo(matches, seeds, k=K, home_advantage=HOME_ADVANTAGE):
     out["Home_Elo"] = home_elo
     out["Away_Elo"] = away_elo
     out["Elo_Difference"] = out["Home_Elo"] - out["Away_Elo"]
+    out.attrs["final_ratings"] = ratings  # every team's rating after the last played match
     return out
 
 

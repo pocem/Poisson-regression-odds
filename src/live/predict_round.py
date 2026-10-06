@@ -15,10 +15,11 @@ Usage, from anywhere:
     python src/live/predict_round.py              # next upcoming round (+ rearranged games before it)
     python src/live/predict_round.py --round 7    # a specific round (its unplayed fixtures)
     python src/live/predict_round.py --force      # predict even if a source is behind
+    python src/live/predict_round.py --skip-if-unchanged   # no new row if the inputs haven't changed
 
 Before predicting, every played match in the fixture feed must already be in
 football-data.co.uk (stats) and Understat (xG), and team names must line up
-across sources -- otherwise the run stops (exit code 1) rather than predict
+across sources -- otherwise the run stops (exit code 3) rather than predict
 from stale features. football-data usually lags results by a day or two.
 
 Safe to re-run: each run appends a new timestamped set of rows, so you can
@@ -30,6 +31,7 @@ the one after the newest completed raw file, and training uses the 3 newest.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -63,7 +65,10 @@ PROCESSED_FILE = os.path.join(ROOT, "data", "processed", "all_seasons_14window_p
 # run -- Bivariate_Poisson.py appends it to the history to evaluate round by round.
 LIVE_SEASON_FILE = os.path.join(ROOT, "data", "processed", "live_season.csv")
 LOG_CSV = os.path.join(ROOT, "data", "predictions", "predictions_log.csv")
+# Outcome of the latest run (predicted / not ready / unchanged ...), shown on the site.
+STATUS_JSON = os.path.join(ROOT, "data", "predictions", "last_run.json")
 MAX_GOALS_GRID = 6
+NOT_READY_EXIT = 3  # distinct from a crash (1), so automation can treat "wait for data" as normal
 REARRANGED_DAYS = 5  # a round's games span Fri-Mon; further out = rearranged
 
 
@@ -184,10 +189,42 @@ def fair(p):
     return round(1 / p, 2) if p > 1e-12 else None
 
 
+def write_status(status, message, **extra):
+    os.makedirs(os.path.dirname(STATUS_JSON), exist_ok=True)
+    with open(STATUS_JSON, "w", encoding="utf-8") as f:
+        json.dump({"run_timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                   "status": status, "message": message, **extra}, f, indent=2)
+
+
+def input_signature(played, xg):
+    """Fingerprint of everything a prediction depends on that can change during
+    the season: results + match stats, xG, and the manual Elo seeds."""
+    h = hashlib.sha1()
+    if played is not None:
+        h.update(played.sort_values(["Date", "HomeTeam"]).to_csv(index=False).encode())
+    h.update(xg.sort_values(["Team", "Date_str"]).to_csv(index=False).encode())
+    with open(MANUAL_SEEDS_FILE, "rb") as f:
+        h.update(f.read())
+    return h.hexdigest()[:12]
+
+
+def already_predicted(upcoming, signature):
+    if not os.path.exists(LOG_CSV):
+        return False
+    log = pd.read_csv(LOG_CSV)
+    if "data_signature" not in log.columns:
+        return False
+    done = set(zip(log.loc[log["data_signature"] == signature, "home_team"],
+                   log.loc[log["data_signature"] == signature, "away_team"]))
+    return all((h, a) in done for h, a in zip(upcoming["HomeTeam"], upcoming["AwayTeam"]))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--round", type=int, default=None, help="round to predict (default: next upcoming)")
     parser.add_argument("--force", action="store_true", help="predict even if a data source is behind")
+    parser.add_argument("--skip-if-unchanged", action="store_true",
+                        help="don't log new predictions if these fixtures were already predicted from the same inputs")
     args = parser.parse_args()
 
     history_seasons = completed_seasons()
@@ -207,7 +244,10 @@ def main():
     if problems:
         print("\nData not ready:" + "".join(f"\n  - {p}" for p in problems))
         if not args.force:
-            raise SystemExit("Stopping -- rerun once the sources catch up, or pass --force to predict anyway.")
+            write_status("not_ready", "Waiting for the data sources to catch up with the latest results.",
+                         problems=problems)
+            print("Stopping -- rerun once the sources catch up, or pass --force to predict anyway.")
+            raise SystemExit(NOT_READY_EXIT)
         print("  --force given: predicting anyway.")
 
     round_no, upcoming = select_fixtures(fixtures, args.round, now)
@@ -230,9 +270,16 @@ def main():
 
     if round_no is None:
         print("No upcoming fixtures -- season finished.")
+        write_status("season_finished", "No upcoming fixtures -- the season is finished.")
         return
     if upcoming.empty:
         print(f"Round {round_no} has no unplayed fixtures -- nothing to predict.")
+        write_status("nothing_to_predict", f"Round {round_no} has no unplayed fixtures.", round=round_no)
+        return
+    signature = input_signature(played, xg)
+    if args.skip_if_unchanged and already_predicted(upcoming, signature):
+        print(f"Round {round_no} already predicted from these exact inputs -- nothing new to log.")
+        write_status("unchanged", f"Round {round_no} already predicted from the latest data.", round=round_no)
         return
     extra = upcoming[upcoming["RoundNumber"] != round_no]
     if not extra.empty:
@@ -274,6 +321,7 @@ def main():
             "home_elo": fx.Home_Elo, "away_elo": fx.Away_Elo,
             "n_train": len(train_df),
             "n_current_season_played": len(played_rows),
+            "data_signature": signature,
             "scoreline_fair_odds_json": json.dumps({
                 f"{h}-{a}": fair(grid[h, a]) for h in range(grid.shape[0]) for a in range(grid.shape[1])
             }),
@@ -287,6 +335,8 @@ def main():
     else:
         log_df.to_csv(LOG_CSV, mode="a", header=not os.path.exists(LOG_CSV), index=False)
     print(f"\nAppended {len(log_df)} predictions to {os.path.relpath(LOG_CSV, ROOT)}")
+    write_status("predicted", f"Predicted {len(log_df)} fixture(s) for round {round_no}.",
+                 round=round_no, forced=bool(problems), problems=problems)
 
     print(f"\n=== Round {round_no} ===")
     for r in log_df.itertuples():

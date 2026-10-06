@@ -1,0 +1,79 @@
+name: Update predictions & website
+
+on:
+  schedule:
+    - cron: "0 6 * * *"     # daily: pick up new results, predict once every source has them
+    - cron: "0 18 * * 2,5"  # Tue/Fri evening: bookmaker odds for the next round are posted
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "src/**"
+      - ".github/workflows/update-site.yml"
+
+permissions:
+  contents: write  # commit the updated data back
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-site
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - run: python -m pip install -r requirements.txt
+
+      - name: Predict next round
+        run: |
+          set +e
+          python src/live/predict_round.py --skip-if-unchanged
+          code=$?
+          if [ $code -eq 3 ]; then
+            echo "::notice::Data sources haven't caught up with the latest results yet -- no new predictions this run."
+            exit 0
+          fi
+          exit $code
+
+      - name: Build website
+        run: python src/site/build_site.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "Update predictions and data ($(date -u +%Y-%m-%d))"
+            git pull --rebase
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
