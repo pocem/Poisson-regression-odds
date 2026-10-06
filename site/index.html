@@ -206,11 +206,13 @@ table.data .dim { color: var(--muted); }
 .mark-no { color: var(--muted); }
 .better-cell { color: var(--good); font-weight: 600; }
 
-.elo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0 28px; padding: 6px 16px; }
-.elo-row { display: grid; grid-template-columns: 26px 1fr auto 64px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; font-size: 14px; }
+/* Multi-column flow: rank 1 at the top of the first column, reading down, then on to the next column. */
+.elo-grid { columns: 260px 3; column-gap: 28px; padding: 6px 16px; }
+.elo-row { break-inside: avoid; display: grid; grid-template-columns: 26px 1fr auto 64px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; font-size: 14px; }
 .elo-row .rk { color: var(--muted); }
 .elo-row .val { font-weight: 600; }
 .elo-row .chg { text-align: right; font-size: 13px; }
+.footnote { color: var(--muted); font-size: 13px; margin: 10px 2px 0; }
 .up { color: var(--good); } .down { color: var(--bad); } .flat { color: var(--muted); }
 
 footer { margin-top: 44px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--grid); padding-top: 16px; }
@@ -296,9 +298,10 @@ footer p { margin: 6px 0; }
 
   <section id="elo">
     <div class="section-head">
-      <div><h2>Elo ratings</h2><p>Computed from results with the standard Elo formula; change is since each team's first match this season.</p></div>
+      <div><h2>Elo ratings<span aria-hidden="true">*</span></h2><p>Computed from results with the standard Elo formula; change is since each team's first match this season.</p></div>
     </div>
     <div class="card elo-grid" id="eloRows"></div>
+    <p class="footnote" id="eloNote"></p>
   </section>
 
   <footer>
@@ -518,6 +521,10 @@ footer p { margin: 6px 0; }
   renderMatches();
 
   // ---------- Elo ----------
+  const firstSeason = "20" + DATA.train_seasons[0].replace("-", "‑");  // "2023‑24", non-breaking hyphen
+  $("eloNote").textContent = `* Elo is computed by this model over its training period (since the ${firstSeason} season) ` +
+    `and moves with Premier League matches only. Champions League, other European and domestic cup games don't affect it, ` +
+    `so these ratings differ from published Elo ratings such as ClubElo.`;
   $("eloRows").innerHTML = DATA.elo.map((e, i) => {
     const c = e.change, cls = c > 0.5 ? "up" : c < -0.5 ? "down" : "flat";
     return `<div class="elo-row"><span class="rk">${i + 1}</span><span>${esc(e.team)}</span><span class="val">${Math.round(e.elo)}</span>
