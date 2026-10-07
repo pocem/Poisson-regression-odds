@@ -1,13 +1,14 @@
 """
-Builds the static website (GitHub Pages) from the pipeline's outputs:
+Builds the static website (GitHub Pages) from the pipeline's outputs, with one
+section per league (src/leagues.py) and a league switcher:
 
-  - next round   latest logged predictions (data/predictions/predictions_log.csv)
+  - next round   latest logged predictions (predictions/predictions_log.csv)
                  + current Bet365 odds from football-data.co.uk/fixtures.csv
   - season       every played match: the live forecast logged before kickoff,
                  or the frozen-model backtest if there was none, vs Bet365
-                 (data/processed/live_season.csv)
+                 (processed/live_season.csv)
   - Elo table    current self-computed ratings
-  - status       outcome of the last pipeline run (data/predictions/last_run.json)
+  - status       outcome of the last pipeline run (predictions/last_run.json)
 
 Fills the template next to this script (page_template.html -- the page's
 source: layout, styling, charts) with the data, and writes the finished,
@@ -31,9 +32,11 @@ import pandas as pd
 import requests
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "src"))
 sys.path.insert(0, os.path.join(ROOT, "src", "live"))
-from sources import HEADERS, CACHE_DIR, ELO_FILE, fetch_fixtures, now_uk  # noqa: E402
-from predict_round import LOG_CSV, STATUS_JSON, LIVE_SEASON_FILE, next_season  # noqa: E402
+from leagues import LEAGUES  # noqa: E402
+from sources import HEADERS, fetch_fixtures, now_uk  # noqa: E402
+from predict_round import WINDOW, next_season  # noqa: E402
 from backtest import season_backtest  # noqa: E402
 from compute_elo import completed_seasons, load_history_matches, seed_ratings, compute_elo  # noqa: E402
 from process_season_data import load_data  # noqa: E402
@@ -43,7 +46,6 @@ TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "page_templa
 FAVICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.svg")
 OUT_DIR = os.path.join(ROOT, "generated_site")
 UPCOMING_ODDS_URL = "https://www.football-data.co.uk/fixtures.csv"
-UPCOMING_ODDS_CACHE = os.path.join(CACHE_DIR, "upcoming_odds.csv")
 OUTCOMES = ["H", "D", "A"]
 
 
@@ -60,24 +62,28 @@ def num(x, digits=4):
     return None if x is None or (isinstance(x, float) and math.isnan(x)) else round(float(x), digits)
 
 
-def upcoming_bet365_odds():
-    """{(home, away): [h, d, a] Bet365 odds} for upcoming Premier League
-    fixtures. football-data fills fixtures.csv on Fridays (weekend
-    rounds) and Tuesdays (midweek); the last download is cached."""
+def download_upcoming_odds():
+    """football-data.co.uk's fixtures.csv: upcoming matches of every league with
+    their odds. Filled on Fridays (weekend rounds) and Tuesdays (midweek)."""
     try:
         resp = requests.get(UPCOMING_ODDS_URL, headers=HEADERS, timeout=30)
         resp.raise_for_status()
-        df = pd.read_csv(io.StringIO(resp.content.decode("utf-8-sig")))
-        df = df[df["Div"] == "E0"]
+        return pd.read_csv(io.StringIO(resp.content.decode("utf-8-sig")))
+    except (requests.RequestException, ValueError) as e:
+        print(f"  WARNING: couldn't fetch {UPCOMING_ODDS_URL} ({e}); using each league's cache if present")
+        return None
+
+
+def upcoming_bet365_odds(league, all_odds):
+    """{(home, away): [h, d, a] Bet365 odds} for the league's upcoming fixtures;
+    the last non-empty download is cached in the league's cache/ folder."""
+    df = pd.DataFrame()
+    if all_odds is not None and "Div" in all_odds:
+        df = all_odds[all_odds["Div"] == league.football_data_code]
         if not df.empty:
-            df.to_csv(UPCOMING_ODDS_CACHE, index=False)
-    except (requests.RequestException, ValueError, KeyError) as e:
-        print(f"  WARNING: couldn't fetch {UPCOMING_ODDS_URL} ({e}); using cache if present")
-        df = pd.DataFrame()
-    if df.empty and os.path.exists(UPCOMING_ODDS_CACHE):
-        df = pd.read_csv(UPCOMING_ODDS_CACHE)
-    if df.empty:
-        return {}
+            df.to_csv(league.upcoming_odds_cache, index=False)
+    if df.empty and os.path.exists(league.upcoming_odds_cache):
+        df = pd.read_csv(league.upcoming_odds_cache)
     return {(r["HomeTeam"], r["AwayTeam"]): [num(r.get("B365" + o), 2) for o in OUTCOMES]
             for _, r in df.iterrows()}
 
@@ -98,6 +104,7 @@ def next_round(log, fixtures, b365_odds):
     if latest.empty:
         return None
 
+    tbc = dict(zip(zip(fixtures["HomeTeam"], fixtures["AwayTeam"]), fixtures["KickoffTBC"]))
     games = []
     for r in latest.sort_values("kickoff").itertuples():
         p = [r.p_home, r.p_draw, r.p_away]
@@ -105,6 +112,7 @@ def next_round(log, fixtures, b365_odds):
         b365_fair = fair_probs(b365) if b365 else None
         games.append({
             "round": int(r.round), "kickoff": str(r.kickoff), "home": r.home_team, "away": r.away_team,
+            "kickoff_tbc": bool(tbc.get((r.home_team, r.away_team), False)),
             "p": p, "odds": [r.fair_odds_home, r.fair_odds_draw, r.fair_odds_away],
             "xg": [num(r.lambda_home + r.lambda_shared, 2), num(r.lambda_away + r.lambda_shared, 2)],
             "elo": [num(r.home_elo, 0), num(r.away_elo, 0)],
@@ -116,14 +124,18 @@ def next_round(log, fixtures, b365_odds):
     return {"round": int(rounds.idxmax()), "predicted_at": latest["run_timestamp"].iloc[0], "games": games}
 
 
-def season_matches(fixtures, log):
+def season_matches(league, fixtures, log):
     """Every played match with the model's pre-match probabilities. Uses the
     latest live prediction logged before kickoff when there is one (a real
     forecast), otherwise the frozen-model backtest."""
-    bt = season_backtest(fixtures)
+    bt = season_backtest(league, fixtures)
     live_fc = {}
     if not log.empty:
+        # Compare against the feed's current kickoff (the real time once a match
+        # is played), not the one logged -- that may have been a "time TBC" placeholder.
+        actual = dict(zip(zip(fixtures["HomeTeam"], fixtures["AwayTeam"]), fixtures["Kickoff"]))
         lg = log.copy()
+        lg["kickoff"] = [actual.get((h, a), k) for h, a, k in zip(lg["home_team"], lg["away_team"], lg["kickoff"])]
         kickoff_utc = pd.to_datetime(lg["kickoff"]).dt.tz_localize("Europe/London").dt.tz_convert("UTC")
         lg = lg[pd.to_datetime(lg["run_timestamp"], utc=True) < kickoff_utc].sort_values("run_timestamp")
         for r in lg.itertuples():
@@ -176,10 +188,13 @@ def summary(matches):
     }
 
 
-def elo_table(season, history_seasons):
-    history = load_history_matches(history_seasons)
-    played = load_data(os.path.join(ROOT, "data", "raw", f"pl{season}_live.csv"))
-    seeds = seed_ratings(pd.concat([history, played], ignore_index=True), pd.read_csv(ELO_FILE))
+def elo_table(league, season, history_seasons):
+    history = load_history_matches(league, history_seasons)
+    live_path = league.live_raw_file(season)
+    if not os.path.exists(live_path):
+        return []
+    played = load_data(live_path)
+    seeds = seed_ratings(league, pd.concat([history, played], ignore_index=True))
     out = compute_elo(pd.concat([history, played], ignore_index=True), seeds)
     final = out.attrs["final_ratings"]
     live = out.iloc[len(history):]
@@ -191,27 +206,46 @@ def elo_table(season, history_seasons):
     return sorted(rows, key=lambda r: -r["elo"])
 
 
-def main():
-    history_seasons = completed_seasons()
+def league_data(league, all_odds):
+    history_seasons = completed_seasons(league)
     season = next_season(history_seasons[-1])
-    fixtures = fetch_fixtures(season)
-    log = pd.read_csv(LOG_CSV) if os.path.exists(LOG_CSV) else pd.DataFrame()
-    status = json.load(open(STATUS_JSON, encoding="utf-8")) if os.path.exists(STATUS_JSON) else None
+    fixtures = fetch_fixtures(league, season)
+    log = pd.read_csv(league.log_csv) if os.path.exists(league.log_csv) else pd.DataFrame()
+    status = None
+    if os.path.exists(league.status_json):
+        with open(league.status_json, encoding="utf-8") as f:
+            status = json.load(f)
 
-    matches = season_matches(fixtures, log) if os.path.exists(LIVE_SEASON_FILE) else []
-    data = {
+    matches = season_matches(league, fixtures, log) if os.path.exists(league.live_season_file) else []
+    return {
+        "id": league.id,
+        "name": league.name,
         "season": season,
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "generated_uk": f"{now_uk():%Y-%m-%d %H:%M}",
+        "rounds_total": league.rounds,
+        "train_seasons": history_seasons[-WINDOW:],
+        "elo_since": history_seasons[0],
         "status": status,
-        "next": next_round(log, fixtures, upcoming_bet365_odds()),
+        "next": next_round(log, fixtures, upcoming_bet365_odds(league, all_odds)),
         "matches": matches,
         "rounds": round_stats(matches) if matches else [],
         "summary": summary(matches) if matches else None,
-        "elo": elo_table(season, history_seasons),
-        "train_seasons": history_seasons[-3:],
+        "elo": elo_table(league, season, history_seasons),
     }
 
+
+def main():
+    all_odds = download_upcoming_odds()
+    leagues = []
+    for league in LEAGUES.values():
+        d = league_data(league, all_odds)
+        leagues.append(d)
+        print(f"{league.name}: {len(d['matches'])} played matches, next round {d['next']['round'] if d['next'] else '-'}")
+
+    data = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_uk": f"{now_uk():%Y-%m-%d %H:%M}",
+        "leagues": leagues,
+    }
     html = open(TEMPLATE, encoding="utf-8").read()
     payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -219,8 +253,7 @@ def main():
     with open(out, "w", encoding="utf-8") as f:
         f.write(html.replace("__DATA_JSON__", payload))
     shutil.copy(FAVICON, os.path.join(OUT_DIR, "favicon.svg"))
-    print(f"Built {os.path.relpath(out, ROOT)}: {len(matches)} played matches, "
-          f"next round {data['next']['round'] if data['next'] else '-'}")
+    print(f"Built {os.path.relpath(out, ROOT)}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,14 @@
+{
+  "model": "bundesliga",
+  "league": "Bundesliga",
+  "train_seasons": [
+    "23-24",
+    "24-25",
+    "25-26"
+  ],
+  "n_train": 918,
+  "training_fingerprint": "ca5ab1df1738",
+  "trained_at": "2026-10-07T07:35:46+00:00",
+  "home_adv": 0.346538,
+  "theta": -1.414918
+}

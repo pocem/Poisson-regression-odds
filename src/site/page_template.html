@@ -219,6 +219,13 @@ table.data .dim { color: var(--muted); }
 
 footer { margin-top: 44px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--grid); padding-top: 16px; }
 footer p { margin: 6px 0; }
+.league-tabs { display: flex; flex-wrap: wrap; gap: 4px; background: var(--surface-2); border-radius: 10px; padding: 3px; width: fit-content; max-width: 100%; margin: 14px 0 0; }
+.league-tabs button {
+  border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 600;
+  padding: 6px 14px; border-radius: 8px; cursor: pointer;
+}
+.league-tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--border); }
+.league-tabs button:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
 .theme-toggle {
   font: inherit; font-size: 13px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 4px 10px; cursor: pointer;
@@ -240,6 +247,7 @@ footer p { margin: 6px 0; }
     </div>
     <div class="meta"><span id="updated"></span> &nbsp;<button class="theme-toggle" id="themeBtn" type="button">Theme</button></div>
   </header>
+  <nav class="league-tabs" id="leagueTabs" role="tablist" aria-label="League"></nav>
   <div id="status"></div>
 
   <section id="next">
@@ -305,7 +313,7 @@ footer p { margin: 6px 0; }
   </section>
 
   <footer>
-    <p><strong>How it works.</strong> A bivariate Poisson regression predicts each side's goals from Elo, rolling xG and xGA, points per game and shots-on-target difference. The model is trained once on the last three completed seasons and stays frozen for the whole season; each round only its inputs are updated with the latest results, so this season's form reaches it through Elo, xG, points per game and shots, not through refitting. Its goal predictions are turned into home / draw / away probabilities and scoreline odds.</p>
+    <p><strong>How it works.</strong> Each league has its own model. A bivariate Poisson regression predicts each side's goals from Elo, rolling xG and xGA, points per game and shots-on-target difference. The model is trained once on the last three completed seasons and stays frozen for the whole season; each round only its inputs are updated with the latest results, so this season's form reaches it through Elo, xG, points per game and shots, not through refitting. Its goal predictions are turned into home / draw / away probabilities and scoreline odds.</p>
     <p><strong>Played matches.</strong> Each shows the prediction logged before kickoff where one exists; otherwise it is recreated with the same frozen model and only the data available before that match.</p>
     <p>Data: football-data.co.uk (results, stats, Bet365 odds), Understat (xG), fixturedownload.com (fixtures). Bet365's margin is removed proportionally, so its odds and probabilities compare directly with the model's.</p>
   </footer>
@@ -315,7 +323,8 @@ footer p { margin: 6px 0; }
 <script>
 (function () {
   "use strict";
-  const DATA = JSON.parse(document.getElementById("data").textContent);
+  const ALL = JSON.parse(document.getElementById("data").textContent);
+  let DATA = ALL.leagues[0];  // the league being shown
   const OUT = ["H", "D", "A"];
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -327,6 +336,9 @@ footer p { margin: 6px 0; }
   const parseUK = (s) => new Date(String(s).replace(" ", "T"));
   const fmtKick = (s) => { const d = parseUK(s); return DAY.format(d) + ", " + String(s).slice(11, 16); };
   const fmtDate = (s) => DAY.format(parseUK(s));
+  const seasonLabel = (s) => "20" + s.replace("-", "‑");  // "2023‑24", non-breaking hyphen
+
+  $("updated").textContent = `Updated ${ALL.generated_uk} UK`;
 
   // ---------- theme toggle ----------
   const root = document.documentElement;
@@ -338,11 +350,36 @@ footer p { margin: 6px 0; }
     drawChart();
   });
 
+  // ---------- league switcher (selection kept in the URL: #bundesliga) ----------
+  $("leagueTabs").innerHTML = ALL.leagues.map((l) =>
+    `<button type="button" role="tab" data-league="${esc(l.id)}">${esc(l.name)}</button>`).join("");
+  $("leagueTabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-league]");
+    if (b) location.hash = b.dataset.league;
+  });
+  function selectFromHash() {
+    const id = decodeURIComponent(location.hash.slice(1));
+    DATA = ALL.leagues.find((l) => l.id === id) || ALL.leagues[0];
+    document.querySelectorAll("#leagueTabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.league === DATA.id)));
+    render();
+  }
+  window.addEventListener("hashchange", selectFromHash);
+
+  function render() {
+    renderHeader();
+    renderNext();
+    renderSeason();
+    drawChart();
+    renderFilters();
+    renderMatches();
+    renderElo();
+  }
+
   // ---------- header + status ----------
-  $("subtitle").textContent = `Season ${DATA.season} · bivariate Poisson model trained on ${DATA.train_seasons.join(", ")}, frozen for the season; inputs updated every round`;
-  $("updated").textContent = `Updated ${DATA.generated_uk} UK`;
-  const st = DATA.status;
-  if (st) {
+  function renderHeader() {
+    $("subtitle").textContent = `${DATA.name} ${DATA.season} · bivariate Poisson model trained on ${DATA.train_seasons.join(", ")}, frozen for the season; inputs updated every round`;
+    const st = DATA.status;
+    if (!st) { $("status").innerHTML = ""; return; }
     const ok = ["predicted", "unchanged"].includes(st.status);
     const when = st.run_timestamp ? new Date(st.run_timestamp).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : "";
     const probs = (st.problems || []).length && st.status === "not_ready"
@@ -353,11 +390,14 @@ footer p { margin: 6px 0; }
   }
 
   // ---------- next round ----------
-  const nx = DATA.next;
-  if (!nx) {
-    $("nextTitle").textContent = "Next round";
-    $("games").innerHTML = `<div class="card empty">No upcoming predictions yet — they appear once the pipeline has run with the latest results.</div>`;
-  } else {
+  function renderNext() {
+    const nx = DATA.next;
+    if (!nx) {
+      $("nextTitle").textContent = "Next round";
+      $("nextSub").textContent = "";
+      $("games").innerHTML = `<div class="card empty">No upcoming predictions yet — they appear once the pipeline has run with the latest results.</div>`;
+      return;
+    }
     $("nextTitle").textContent = `Round ${nx.round}`;
     const anyBook = nx.games.some((g) => g.b365);
     $("nextSub").textContent = `Predicted ${new Date(nx.predicted_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. ` +
@@ -370,7 +410,7 @@ footer p { margin: 6px 0; }
           <tr><td>Edge</td>${g.edge.map((e) => `<td class="${e > 0 ? "edge-pos" : "edge-neg"}">${e > 0 ? "▲ +" : ""}${(e * 100).toFixed(1)} pp</td>`).join("")}</tr>
         </table></div>` : "";
       return `<article class="card game">
-        <div class="when"><span>${esc(fmtKick(g.kickoff))}${esc(extra)}</span><span>Elo ${g.elo[0] ?? "–"} – ${g.elo[1] ?? "–"}</span></div>
+        <div class="when"><span>${esc(g.kickoff_tbc ? `Weekend of ${fmtDate(g.kickoff)} · kickoff TBC` : fmtKick(g.kickoff))}${esc(extra)}</span><span>Elo ${g.elo[0] ?? "–"} – ${g.elo[1] ?? "–"}</span></div>
         <div class="teams"><span class="t">${esc(g.home)}</span><span class="vs">vs</span><span class="t away">${esc(g.away)}</span></div>
         <div class="probbar" role="img" aria-label="Home ${pct(g.p[0])}, draw ${pct(g.p[1])}, away ${pct(g.p[2])}">
           <span class="h" style="width:${g.p[0] * 100}%"></span><span class="d" style="width:${g.p[1] * 100}%"></span><span class="a" style="width:${g.p[2] * 100}%"></span>
@@ -389,10 +429,13 @@ footer p { margin: 6px 0; }
   }
 
   // ---------- season tiles ----------
-  const S = DATA.summary;
-  if (!S) {
-    $("seasonSub").textContent = "No matches played yet.";
-  } else {
+  function renderSeason() {
+    const S = DATA.summary;
+    if (!S) {
+      $("seasonSub").textContent = "No matches played yet.";
+      $("tiles").innerHTML = "";
+      return;
+    }
     $("seasonSub").textContent = `${S.n} matches played. Model compared with Bet365, both scored on the actual results.`;
     const cmp = (m, b, lowerBetter) => {
       if (b == null) return "";
@@ -404,7 +447,7 @@ footer p { margin: 6px 0; }
       ["Log loss", S.ll_model.toFixed(3), cmp(S.ll_model, S.ll_b365, true)],
       ["Brier score", S.brier_model.toFixed(3), cmp(S.brier_model, S.brier_b365, true)],
       ["Favourite won", pct1(S.acc_model), cmp(S.acc_model, S.acc_b365, false)],
-      ["Matches", String(S.n), `${DATA.rounds.length} rounds`],
+      ["Matches", String(S.n), `${DATA.rounds.length} of ${DATA.rounds_total} rounds`],
     ].map(([l, v, c]) => `<div class="card tile"><div class="label">${l}</div><div class="value">${v}</div><div class="cmp">${c}</div></div>`).join("");
   }
 
@@ -430,7 +473,8 @@ footer p { margin: 6px 0; }
 
   function drawChart() {
     const box = $("chart"), tip = $("tooltip");
-    box.querySelectorAll("svg").forEach((s) => s.remove());
+    box.querySelectorAll("svg, .note").forEach((s) => s.remove());
+    tip.style.display = "none";
     const R = DATA.rounds;
     if (!R.length) { box.insertAdjacentHTML("afterbegin", `<p class="note">The chart appears after the first round is played.</p>`); return; }
     const css = getComputedStyle(document.documentElement);
@@ -445,7 +489,7 @@ footer p { margin: 6px 0; }
     const svg = document.createElementNS(ns, "svg");
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", "Log loss by round for the model and Bet365. The same values are in the match table.");
+    svg.setAttribute("aria-label", `${DATA.name}: log loss by round for the model and Bet365. The same values are in the match table.`);
     let g = "";
     ticks.forEach((t) => {
       g += `<line class="${t === y0 ? "baseline" : "gridline"}" x1="${M.l}" x2="${W - M.r}" y1="${y(t)}" y2="${y(t)}"/>`;
@@ -487,15 +531,16 @@ footer p { margin: 6px 0; }
     hit.addEventListener("pointerdown", show);
     hit.addEventListener("pointerleave", hide);
   }
-  drawChart();
   let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(drawChart, 120); });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawChart);
 
   // ---------- match table ----------
-  const rounds = [...new Set(DATA.matches.map((m) => m.round))].sort((a, b) => b - a);
-  $("roundFilter").innerHTML = `<option value="">All rounds</option>` + rounds.map((r) => `<option value="${r}">Round ${r}</option>`).join("");
-  const teams = [...new Set(DATA.matches.flatMap((m) => [m.home, m.away]))].sort((a, b) => a.localeCompare(b));
-  $("teamFilter").innerHTML = `<option value="">All teams</option>` + teams.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  function renderFilters() {
+    const rounds = [...new Set(DATA.matches.map((m) => m.round))].sort((a, b) => b - a);
+    $("roundFilter").innerHTML = `<option value="">All rounds</option>` + rounds.map((r) => `<option value="${r}">Round ${r}</option>`).join("");
+    const teams = [...new Set(DATA.matches.flatMap((m) => [m.home, m.away]))].sort((a, b) => a.localeCompare(b));
+    $("teamFilter").innerHTML = `<option value="">All teams</option>` + teams.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  }
   function renderMatches() {
     const rf = $("roundFilter").value, tf = $("teamFilter").value;
     const rows = DATA.matches
@@ -519,18 +564,20 @@ footer p { margin: 6px 0; }
   }
   $("roundFilter").addEventListener("change", renderMatches);
   $("teamFilter").addEventListener("change", renderMatches);
-  renderMatches();
 
   // ---------- Elo ----------
-  const firstSeason = "20" + DATA.train_seasons[0].replace("-", "‑");  // "2023‑24", non-breaking hyphen
-  $("eloNote").textContent = `* Elo is computed by this model over its training period (since the ${firstSeason} season) ` +
-    `and moves with Premier League matches only. Champions League, other European and domestic cup games don't affect it, ` +
-    `so these ratings differ from published Elo ratings such as ClubElo.`;
-  $("eloRows").innerHTML = DATA.elo.map((e, i) => {
-    const c = e.change, cls = c > 0.5 ? "up" : c < -0.5 ? "down" : "flat";
-    return `<div class="elo-row"><span class="rk">${i + 1}</span><span>${esc(e.team)}</span><span class="val">${Math.round(e.elo)}</span>
-      <span class="chg ${cls}">${c > 0.5 ? "▲ +" : c < -0.5 ? "▼ " : ""}${Math.round(c)}</span></div>`;
-  }).join("");
+  function renderElo() {
+    $("eloNote").textContent = `* Elo is computed by this model from the ${seasonLabel(DATA.elo_since)} season onwards ` +
+      `and moves with ${DATA.name} matches only. Champions League, other European and domestic cup games don't affect it, ` +
+      `so these ratings differ from published Elo ratings such as ClubElo.`;
+    $("eloRows").innerHTML = DATA.elo.map((e, i) => {
+      const c = e.change, cls = c > 0.5 ? "up" : c < -0.5 ? "down" : "flat";
+      return `<div class="elo-row"><span class="rk">${i + 1}</span><span>${esc(e.team)}</span><span class="val">${Math.round(e.elo)}</span>
+        <span class="chg ${cls}">${c > 0.5 ? "▲ +" : c < -0.5 ? "▼ " : ""}${Math.round(c)}</span></div>`;
+    }).join("");
+  }
+
+  selectFromHash();
 })();
 </script>
 </body>

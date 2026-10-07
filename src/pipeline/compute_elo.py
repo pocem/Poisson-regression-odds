@@ -14,40 +14,42 @@ computed here, match by match, with the standard Elo update:
 
 Home_Elo / Away_Elo of a match are the ratings BEFORE it is played.
 
-Seed sources, in order:
-  1. data/external/elo_seeds_manual.csv (team, season, elo) -- hand-entered
-     ratings, always win,
-  2. the ClubElo cache (data/external/elo_df.csv) on the spell's first match date,
-  3. that date fetched from ClubElo (only if a fetch function is passed in),
-  4. the team's latest cached rating before that date,
-  5. the average seed of the promoted spells, so a team with no rating at all
-     still gets a sensible value.
+Seed = the team's ClubElo rating going into its first match of the spell --
+the same rule in every league. Sources, in order (files are per league, in
+data/leagues/<league>/external/):
+  1. elo_seeds_manual.csv (team, season, elo) -- hand-entered ratings, always win,
+  2. the ClubElo cache (elo_df.csv): the rating whose validity range (from..to)
+     covers the day before the first match -- ClubElo only changes a rating
+     when the team plays, so this is exactly its pre-match rating, whichever
+     date the table was downloaded on,
+  3. the cache row downloaded on the first match date itself,
+  4. that date fetched from ClubElo (only if a fetch function is passed in),
+  5. FALLBACK, reported as a warning: the team's latest cached rating before
+     that date (it may have changed since, e.g. through cup matches),
+  6. FALLBACK: the average seed of the promoted spells, so a team with no
+     rating at all still gets a sensible value.
 
-Run directly to recompute Home_Elo / Away_Elo in the processed datasets:
-    python src/pipeline/compute_elo.py
+Run directly to recompute Home_Elo / Away_Elo in a league's processed dataset:
+    python src/pipeline/compute_elo.py --league premier_league     (or: all)
 """
 
+import argparse
 import glob
 import os
 import re
+import sys
 
 import numpy as np
 import pandas as pd
 
 from process_season_data import load_data
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from leagues import leagues_from_arg  # noqa: E402
+
 K = 20
 HOME_ADVANTAGE = 0
 SPELL_GAP_DAYS = 200  # longer than a summer break, shorter than a season away
-
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-RAW_DIR = os.path.join(ROOT, "data", "raw")
-ELO_FILE = os.path.join(ROOT, "data", "external", "elo_df.csv")
-MANUAL_SEEDS_FILE = os.path.join(ROOT, "data", "external", "elo_seeds_manual.csv")
-PROCESSED_FILES = [
-    os.path.join(ROOT, "data", "processed", "all_seasons_14window_ppg.csv"),
-    os.path.join(ROOT, "data", "processed", "all_seasons_14window_ppg_full.csv"),
-]
 
 
 def season_of(date_str):
@@ -70,44 +72,61 @@ def spell_starts(matches):
 
 
 def _clean_cache(elo_cache):
-    cache = elo_cache[["team", "QueryDate", "elo"]].dropna().copy()
-    cache["QueryDate"] = pd.to_datetime(cache["QueryDate"]).dt.strftime("%Y-%m-%d")
+    cache = elo_cache[["team", "QueryDate", "elo", "from", "to"]].dropna(subset=["team", "QueryDate", "elo"]).copy()
+    cache["QueryDate"] = pd.to_datetime(cache["QueryDate"], format="mixed").dt.strftime("%Y-%m-%d")
+    cache["from"] = pd.to_datetime(cache["from"], format="mixed", errors="coerce")
+    cache["to"] = pd.to_datetime(cache["to"], format="mixed", errors="coerce")
     return cache.drop_duplicates(["team", "QueryDate"], keep="last")
 
 
-def _load_manual():
-    if not os.path.exists(MANUAL_SEEDS_FILE):
+def _valid_on(cache, team, day):
+    """ClubElo rating of `team` in force on `day` (its from..to range covers it), or None."""
+    rows = cache[(cache["team"] == team) & (cache["from"] <= day) & (cache["to"] >= day)]
+    return None if rows.empty else float(rows["elo"].iloc[-1])
+
+
+def _load_manual(league):
+    if not os.path.exists(league.manual_seeds_file):
         return {}
-    m = pd.read_csv(MANUAL_SEEDS_FILE, dtype={"season": str})
+    m = pd.read_csv(league.manual_seeds_file, dtype={"season": str})
     return {(r.team, r.season): float(r.elo) for r in m.itertuples()}
 
 
-def seed_ratings(matches, elo_cache, fetch=None):
+def seed_ratings(league, matches, fetch=None):
     """{(team, spell start date): starting rating} for every spell in
     `matches` (played or not). fetch: optional callable(list of
     'YYYY-MM-DD') -> updated elo cache, used for seeds not cached yet."""
     spells = spell_starts(matches)
-    manual = _load_manual()
-    cache = _clean_cache(elo_cache)
-    exact = cache.set_index(["team", "QueryDate"])["elo"]
+    manual = _load_manual(league)
+    cache = _clean_cache(pd.read_csv(league.elo_file))
 
-    missing = [d for t, d in spells if (t, season_of(d)) not in manual and (t, d) not in exact.index]
+    def pre_match(team, date):
+        valid = _valid_on(cache, team, pd.Timestamp(date) - pd.Timedelta(days=1))
+        if valid is not None:
+            return valid
+        same_day = cache[(cache["team"] == team) & (cache["QueryDate"] == date)]
+        return None if same_day.empty else float(same_day["elo"].iloc[-1])
+
+    missing = [d for t, d in spells if (t, season_of(d)) not in manual and pre_match(t, d) is None]
     if missing and fetch is not None:
         cache = _clean_cache(fetch(sorted(set(missing))))
-        exact = cache.set_index(["team", "QueryDate"])["elo"]
 
     seeds, source = {}, {}
     for team, date in spells:
         key = (team, date)
+        exact = pre_match(team, date)
         if (team, season_of(date)) in manual:
             seeds[key], source[key] = manual[(team, season_of(date))], "manual"
-        elif key in exact.index:
-            seeds[key], source[key] = float(exact[key]), "ClubElo"
+        elif exact is not None:
+            seeds[key], source[key] = exact, "ClubElo"
         else:
             before = cache[(cache["team"] == team) & (cache["QueryDate"] < date)]
             if not before.empty:
                 row = before.sort_values("QueryDate").iloc[-1]
-                seeds[key], source[key] = float(row["elo"]), f"ClubElo {row['QueryDate']} (latest cached before)"
+                days = (pd.Timestamp(date) - pd.Timestamp(row["QueryDate"])).days
+                seeds[key] = float(row["elo"])
+                source[key] = (f"FALLBACK: ClubElo {row['QueryDate']}, {days} days before its first match -- "
+                               f"add the pre-match rating to {os.path.basename(league.manual_seeds_file)}")
 
     # Promoted = spells starting well after the first season kicked off (not
     # just a team missing the opening day).
@@ -161,39 +180,40 @@ def compute_elo(matches, seeds, k=K, home_advantage=HOME_ADVANTAGE):
     return out
 
 
-def completed_seasons():
-    names = [os.path.basename(p) for p in glob.glob(os.path.join(RAW_DIR, "pl*.csv"))]
-    return sorted(m.group(1) for n in names if (m := re.fullmatch(r"pl(\d\d-\d\d)\.csv", n)))
+def completed_seasons(league):
+    """['23-24', '24-25', '25-26'] from the league's raw/ folder (live files excluded)."""
+    names = [os.path.basename(p) for p in glob.glob(league.path("raw", "*.csv"))]
+    return sorted(m.group(1) for n in names if (m := re.fullmatch(r"(\d\d-\d\d)\.csv", n)))
 
 
-def load_history_matches(seasons=None):
-    seasons = seasons or completed_seasons()
-    return pd.concat([load_data(os.path.join(RAW_DIR, f"pl{s}.csv")) for s in seasons], ignore_index=True)
+def load_history_matches(league, seasons=None):
+    seasons = seasons or completed_seasons(league)
+    return pd.concat([load_data(league.raw_file(s)) for s in seasons], ignore_index=True)
 
 
-def refresh_processed_elo(seeds, history_matches=None):
-    """Overwrites Home_Elo / Away_Elo in the processed datasets with ratings
-    computed from the raw match files, so training data and live features
-    always use the same Elo definition."""
-    history_matches = history_matches if history_matches is not None else load_history_matches()
+def refresh_processed_elo(league, seeds, history_matches=None):
+    """Overwrites Home_Elo / Away_Elo in the league's processed dataset with
+    ratings computed from the raw match files, so training data and live
+    features always use the same Elo definition."""
+    history_matches = history_matches if history_matches is not None else load_history_matches(league)
     elo = compute_elo(history_matches, seeds)[["Date", "HomeTeam", "AwayTeam", "Home_Elo", "Away_Elo"]]
     elo["Date"] = elo["Date"].astype("datetime64[ns]")
-    for path in PROCESSED_FILES:
-        if not os.path.exists(path):
-            continue
-        df = pd.read_csv(path, parse_dates=["Date"])
-        df["Date"] = df["Date"].astype("datetime64[ns]")
-        cols = df.columns.tolist()
-        df = df.drop(columns=["Home_Elo", "Away_Elo"]).merge(elo, on=["Date", "HomeTeam", "AwayTeam"], how="left")
-        df[cols].to_csv(path, index=False)
+    if not os.path.exists(league.processed_file):
+        return
+    df = pd.read_csv(league.processed_file, parse_dates=["Date"])
+    df["Date"] = df["Date"].astype("datetime64[ns]")
+    cols = df.columns.tolist()
+    df = df.drop(columns=["Home_Elo", "Away_Elo"]).merge(elo, on=["Date", "HomeTeam", "AwayTeam"], how="left")
+    df[cols].to_csv(league.processed_file, index=False)
 
 
 def main():
-    history = load_history_matches()
-    seeds = seed_ratings(history, pd.read_csv(ELO_FILE))
-    refresh_processed_elo(seeds, history)
-    print(f"Recomputed Elo (K={K}, home advantage={HOME_ADVANTAGE}) for {len(history)} matches "
-          f"in {', '.join(os.path.relpath(p, ROOT) for p in PROCESSED_FILES)}")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--league", default="all", help="league id, or 'all'")
+    for league in leagues_from_arg(parser.parse_args().league):
+        history = load_history_matches(league)
+        refresh_processed_elo(league, seed_ratings(league, history), history)
+        print(f"{league.name}: recomputed Elo (K={K}, home advantage={HOME_ADVANTAGE}) for {len(history)} matches")
 
 
 if __name__ == "__main__":

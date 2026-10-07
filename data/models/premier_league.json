@@ -1,5 +1,6 @@
 {
-  "model": "bivariate_poisson_23-24_to_25-26",
+  "model": "premier_league",
+  "league": "Premier League",
   "train_seasons": [
     "23-24",
     "24-25",
@@ -7,7 +8,7 @@
   ],
   "n_train": 1140,
   "training_fingerprint": "bb8fbede64fb",
-  "trained_at": "2026-10-06T12:37:21+00:00",
+  "trained_at": "2026-10-07T06:58:47+00:00",
   "home_adv": 0.29758,
   "theta": -1.624346
 }

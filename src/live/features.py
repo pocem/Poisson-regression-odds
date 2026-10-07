@@ -1,8 +1,8 @@
 """
-Builds model features for the live season, the same way
-build_full_dataset_no_loss.py builds the historical dataset: one continuous
-frame from the first raw season through the live one, so PPG carryover and
-every EWMA rolling feature continue across season boundaries.
+Builds the model's features for any set of a league's seasons as one
+continuous frame, so PPG carryover, Elo and every EWMA rolling feature continue
+across season boundaries. Used both for the historical training dataset
+(src/pipeline/build_dataset.py) and for the live season (build_live_frames).
 
 Unplayed fixtures of the round being predicted are appended as placeholder
 rows (all stats NaN). shift(1) inside the EWMA means a placeholder row picks
@@ -19,11 +19,12 @@ import pandas as pd
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "src", "pipeline"))
 from process_season_data import load_data, add_points_per_game, create_team_df  # noqa: E402
-from rebuild_rolling_as_ewma import TEAM_MAP, VENUE_ROLLING_COLS, TEAM_ROLLING_COLS  # noqa: E402
-from build_full_dataset_no_loss import SPAN  # noqa: E402
+from rebuild_rolling_as_ewma import VENUE_ROLLING_COLS, TEAM_ROLLING_COLS  # noqa: E402
 from compute_elo import compute_elo  # noqa: E402
 
-from sources import CACHE_DIR, RAW_DIR, season_start_year  # noqa: E402
+from sources import align_xg_dates, season_start_year, understat_rows  # noqa: E402
+
+SPAN = 14  # EWMA span of every rolling feature
 
 RAW_STAT_COLS = [
     "FTHG", "FTAG", "FTR", "HTHG", "HTAG", "HTR",
@@ -31,24 +32,14 @@ RAW_STAT_COLS = [
 ]
 
 
-def load_xg_long(seasons):
+def load_xg_long(league, seasons):
     rows = []
     for season in seasons:
-        path = os.path.join(CACHE_DIR, f"leaguedata_{season_start_year(season)}.json")
-        if not os.path.exists(path):
-            continue
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        for team in data["teams"].values():
-            title = TEAM_MAP.get(team["title"], team["title"])
-            for m in team["history"]:
-                rows.append({
-                    "Date_str": pd.to_datetime(m["date"]).strftime("%Y-%m-%d"),
-                    "Team": title,
-                    "xG": m["xG"], "xGA": m["xGA"],
-                    "deep": m["deep"], "deep_allowed": m["deep_allowed"],
-                })
-    return pd.DataFrame(rows)
+        path = league.understat_cache(season_start_year(season))
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                rows += understat_rows(league, json.load(f))
+    return pd.DataFrame(rows, columns=["Team", "Date_str", "xG", "xGA", "deep", "deep_allowed"])
 
 
 def _placeholder_raw(upcoming_df):
@@ -58,31 +49,17 @@ def _placeholder_raw(upcoming_df):
     return df
 
 
-def build_live_frames(history_seasons, current_season, played_df, upcoming_df, elo_seeds):
-    """
-    history_seasons: completed seasons with a data/raw/pl{s}.csv, oldest first.
-    played_df: load_data()-shaped frame of the live season so far, or None.
-    upcoming_df: DataFrame[Date, Time, HomeTeam, AwayTeam] to predict.
-    elo_seeds: {(team, spell start date): starting rating} from compute_elo.seed_ratings().
-
-    Returns (played_rows, predict_rows) -- both live-season only, with every
-    covariate the model needs.
-    """
-    all_seasons = list(history_seasons) + [current_season]
-
-    raw_frames = {s: load_data(os.path.join(RAW_DIR, f"pl{s}.csv")) for s in history_seasons}
-    current_raw = played_df if played_df is not None else pd.DataFrame(
-        columns=["Date", "Time", "HomeTeam", "AwayTeam"] + RAW_STAT_COLS)
-    raw_frames[current_season] = (
-        pd.concat([current_raw, _placeholder_raw(upcoming_df)], ignore_index=True)
-        .sort_values(["Date", "Time"]).reset_index(drop=True)
-    )
+def build_feature_frame(league, season_frames, elo_seeds):
+    """season_frames: {season: load_data()-shaped frame}, oldest season first.
+    Returns every match of every season with Season, PPG, Elo and all rolling
+    features (the model's covariates among them)."""
+    seasons = list(season_frames)
 
     # PPG, carried over season to season
     frames = []
     prior_ppg = None
-    for season in all_seasons:
-        raw, prior_ppg = add_points_per_game(raw_frames[season].copy(), prior_ppg=prior_ppg)
+    for season in seasons:
+        raw, prior_ppg = add_points_per_game(season_frames[season].copy(), prior_ppg=prior_ppg)
         raw["Season"] = season
         frames.append(raw)
     matches = pd.concat(frames, ignore_index=True)
@@ -93,8 +70,8 @@ def build_live_frames(history_seasons, current_season, played_df, upcoming_df, e
 
     # Team-centric frame + EWMA rolling features, continuous across seasons
     team_frames = []
-    for season in all_seasons:
-        raw = raw_frames[season].copy()
+    for season in seasons:
+        raw = season_frames[season].copy()
         raw["TablePosDiff"] = 0.0  # not a model covariate; create_team_df just needs the column
         team_frames.append(create_team_df(raw))
     team_all = pd.concat(team_frames, ignore_index=True)
@@ -115,7 +92,8 @@ def build_live_frames(history_seasons, current_season, played_df, upcoming_df, e
         elo_lookup.rename(columns={"AwayTeam": "Team", "Home_Elo": "OpponentElo"})[["Date_str", "Time", "Team", "OpponentElo"]],
     ], ignore_index=True)
     team_all = team_all.merge(opponent_elo, on=["Date_str", "Time", "Team"], how="left")
-    team_all = team_all.merge(load_xg_long(all_seasons), on=["Date_str", "Team"], how="left")
+    xg = align_xg_dates(load_xg_long(league, seasons), zip(team_all["Team"], team_all["Date_str"]))
+    team_all = team_all.merge(xg, on=["Date_str", "Team"], how="left")
     team_all = team_all.sort_values(["Team", "Date", "Time"]).reset_index(drop=True)
 
     for col in VENUE_ROLLING_COLS:
@@ -140,7 +118,26 @@ def build_live_frames(history_seasons, current_season, played_df, upcoming_df, e
     )
     matches = matches.merge(home_roll, on=["Date", "Time", "HomeTeam"], how="left")
     matches = matches.merge(away_roll, on=["Date", "Time", "AwayTeam"], how="left")
-    matches = matches.drop(columns=["Date_str"])
+    return matches.drop(columns=["Date_str"])
 
+
+def build_live_frames(league, history_seasons, current_season, played_df, upcoming_df, elo_seeds):
+    """
+    history_seasons: completed seasons with a file in the league's raw/ folder, oldest first.
+    played_df: load_data()-shaped frame of the live season so far, or None.
+    upcoming_df: DataFrame[Date, Time, HomeTeam, AwayTeam] to predict.
+    elo_seeds: {(team, spell start date): starting rating} from compute_elo.seed_ratings().
+
+    Returns (played_rows, predict_rows) -- both live-season only, with every
+    covariate the model needs.
+    """
+    season_frames = {s: load_data(league.raw_file(s)) for s in history_seasons}
+    current_raw = played_df if played_df is not None else pd.DataFrame(
+        columns=["Date", "Time", "HomeTeam", "AwayTeam"] + RAW_STAT_COLS)
+    season_frames[current_season] = (
+        pd.concat([current_raw, _placeholder_raw(upcoming_df)], ignore_index=True)
+        .sort_values(["Date", "Time"]).reset_index(drop=True)
+    )
+    matches = build_feature_frame(league, season_frames, elo_seeds)
     live = matches[matches["Season"] == current_season]
     return live[live["FTHG"].notna()].copy(), live[live["FTHG"].isna()].copy()
