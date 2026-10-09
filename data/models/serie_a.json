@@ -1,0 +1,14 @@
+{
+  "model": "serie_a",
+  "league": "Serie A",
+  "train_seasons": [
+    "23-24",
+    "24-25",
+    "25-26"
+  ],
+  "n_train": 1140,
+  "training_fingerprint": "4e7531dd01d6",
+  "trained_at": "2026-10-09T13:06:14+00:00",
+  "home_adv": 0.164437,
+  "theta": -2.382261
+}

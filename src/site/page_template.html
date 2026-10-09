@@ -377,7 +377,8 @@ footer p { margin: 6px 0; }
 
   // ---------- header + status ----------
   function renderHeader() {
-    $("subtitle").textContent = `${DATA.name} ${DATA.season} · bivariate Poisson model trained on ${DATA.train_seasons.join(", ")}, frozen for the season; inputs updated every round`;
+    const nb = (s) => s.replace("-", "‑");  // non-breaking hyphen: "23‑24" never splits across lines
+    $("subtitle").textContent = `${DATA.name} ${nb(DATA.season)} · bivariate Poisson model trained on ${DATA.train_seasons.map(nb).join(", ")}, frozen for the season; inputs updated every round`;
     const st = DATA.status;
     if (!st) { $("status").innerHTML = ""; return; }
     const ok = ["predicted", "unchanged"].includes(st.status);

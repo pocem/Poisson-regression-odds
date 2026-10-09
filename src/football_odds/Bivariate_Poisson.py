@@ -161,17 +161,18 @@ def report_comparison(metric_name, model_arr, baseline_arr, baseline_name):
     )
 
 
-def walk_forward_vs_bet365(all_df, matches_per_round=10, n_rounds=38):
+def walk_forward_vs_bet365(all_df):
     """Frozen-model evaluation: for every season with WINDOW seasons before it,
     train once on those, predict the whole season, and score it round by round
-    (chunks of matches_per_round) against Bet365's margin-free odds."""
+    (chunks of one round = half the season's teams, e.g. 10 in a 20-team
+    season, 9 in an 18-team one) against Bet365's margin-free odds."""
     seasons = sorted(all_df["Season"].unique())
 
     chunk_rows = []
     all_model_ll, all_b365_ll = [], []
     all_model_brier, all_b365_brier = [], []
     all_model_correct, all_b365_correct = [], []
-    per_chunk_idx_ll = {i: [] for i in range(n_rounds + 1)}
+    per_chunk_idx_ll = {}
 
     for i in range(WINDOW, len(seasons)):
         train_seasons = seasons[i - WINDOW:i]
@@ -181,6 +182,7 @@ def walk_forward_vs_bet365(all_df, matches_per_round=10, n_rounds=38):
         season_df = all_df[all_df["Season"] == test_season].sort_values("Date").reset_index(drop=True)
         # Fixed 10-match chunks (= rounds), not array_split, so a live season
         # that's only partly played still gets one chunk per round.
+        matches_per_round = len(set(season_df["HomeTeam"]) | set(season_df["AwayTeam"])) // 2
         chunks = [season_df.iloc[r:r + matches_per_round] for r in range(0, len(season_df), matches_per_round)]
 
         # Frozen model: trained once on the WINDOW prior seasons, then used for
@@ -220,7 +222,7 @@ def walk_forward_vs_bet365(all_df, matches_per_round=10, n_rounds=38):
             all_b365_brier.append(b365_brier)
             all_model_correct.append(model_correct)
             all_b365_correct.append(b365_correct)
-            per_chunk_idx_ll[c_idx].append(model_ll.mean())
+            per_chunk_idx_ll.setdefault(c_idx, []).append(model_ll.mean())
 
             chunk_rows.append({
                 "test_season": test_season,
@@ -235,8 +237,8 @@ def walk_forward_vs_bet365(all_df, matches_per_round=10, n_rounds=38):
 
     chunk_df = pd.DataFrame(chunk_rows)
 
-    print(f"\n=== Within-season trend: mean model log loss by chunk index (0=start of season, {n_rounds - 1}=end) ===")
-    for c_idx in range(n_rounds):
+    print(f"\n=== Within-season trend: mean model log loss by chunk index (0=start of season) ===")
+    for c_idx in sorted(per_chunk_idx_ll):
         vals = per_chunk_idx_ll[c_idx]
         if vals:
             print(f"chunk {c_idx}: mean_log_loss={np.mean(vals):.4f}  (n_seasons={len(vals)})")
@@ -286,7 +288,7 @@ def main():
         raise SystemExit(f"Need more than WINDOW={WINDOW} seasons to have a test season -- "
                          f"run src/live/predict_round.py first to create {league.live_season_file}.")
     all_df = all_df.sort_values("Date").reset_index(drop=True)
-    walk_forward_vs_bet365(all_df, matches_per_round=league.matches_per_round, n_rounds=league.rounds)
+    walk_forward_vs_bet365(all_df)
 
 
 if __name__ == "__main__":

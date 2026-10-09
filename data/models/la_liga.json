@@ -1,0 +1,14 @@
+{
+  "model": "la_liga",
+  "league": "La Liga",
+  "train_seasons": [
+    "23-24",
+    "24-25",
+    "25-26"
+  ],
+  "n_train": 1140,
+  "training_fingerprint": "c9d046828c6d",
+  "trained_at": "2026-10-09T13:01:29+00:00",
+  "home_adv": 0.261803,
+  "theta": -2.180441
+}

@@ -80,8 +80,12 @@ def _clean_cache(elo_cache):
 
 
 def _valid_on(cache, team, day):
-    """ClubElo rating of `team` in force on `day` (its from..to range covers it), or None."""
-    rows = cache[(cache["team"] == team) & (cache["from"] <= day) & (cache["to"] >= day)]
+    """ClubElo rating of `team` in force on `day` (its from..to range covers it), or None.
+    Only tables downloaded on or after `day` count: for a team's current rating
+    ClubElo fills `to` with a placeholder future date, so a table from May can't
+    vouch for a rating still being valid in August."""
+    rows = cache[(cache["team"] == team) & (cache["from"] <= day) & (cache["to"] >= day)
+                 & (cache["QueryDate"] >= day.strftime("%Y-%m-%d"))]
     return None if rows.empty else float(rows["elo"].iloc[-1])
 
 

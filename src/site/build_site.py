@@ -99,12 +99,15 @@ def next_round(log, fixtures, b365_odds):
     if log.empty:
         return None
     latest = log[log["run_timestamp"] == log["run_timestamp"].max()]
-    played = set(zip(fixtures.loc[fixtures["Played"], "HomeTeam"], fixtures.loc[fixtures["Played"], "AwayTeam"]))
-    latest = latest[[(h, a) not in played for h, a in zip(latest["home_team"], latest["away_team"])]]
+    # Fixtures are keyed by (home, away, round): the same pairing can appear twice in a feed.
+    played = set(zip(fixtures.loc[fixtures["Played"], "HomeTeam"], fixtures.loc[fixtures["Played"], "AwayTeam"],
+                     fixtures.loc[fixtures["Played"], "RoundNumber"]))
+    latest = latest[[(h, a, rd) not in played
+                     for h, a, rd in zip(latest["home_team"], latest["away_team"], latest["round"])]]
     if latest.empty:
         return None
 
-    tbc = dict(zip(zip(fixtures["HomeTeam"], fixtures["AwayTeam"]), fixtures["KickoffTBC"]))
+    tbc = dict(zip(zip(fixtures["HomeTeam"], fixtures["AwayTeam"], fixtures["RoundNumber"]), fixtures["KickoffTBC"]))
     games = []
     for r in latest.sort_values("kickoff").itertuples():
         p = [r.p_home, r.p_draw, r.p_away]
@@ -112,7 +115,7 @@ def next_round(log, fixtures, b365_odds):
         b365_fair = fair_probs(b365) if b365 else None
         games.append({
             "round": int(r.round), "kickoff": str(r.kickoff), "home": r.home_team, "away": r.away_team,
-            "kickoff_tbc": bool(tbc.get((r.home_team, r.away_team), False)),
+            "kickoff_tbc": bool(tbc.get((r.home_team, r.away_team, r.round), False)),
             "p": p, "odds": [r.fair_odds_home, r.fair_odds_draw, r.fair_odds_away],
             "xg": [num(r.lambda_home + r.lambda_shared, 2), num(r.lambda_away + r.lambda_shared, 2)],
             "elo": [num(r.home_elo, 0), num(r.away_elo, 0)],
@@ -133,17 +136,18 @@ def season_matches(league, fixtures, log):
     if not log.empty:
         # Compare against the feed's current kickoff (the real time once a match
         # is played), not the one logged -- that may have been a "time TBC" placeholder.
-        actual = dict(zip(zip(fixtures["HomeTeam"], fixtures["AwayTeam"]), fixtures["Kickoff"]))
+        actual = dict(zip(zip(fixtures["HomeTeam"], fixtures["AwayTeam"], fixtures["RoundNumber"]), fixtures["Kickoff"]))
         lg = log.copy()
-        lg["kickoff"] = [actual.get((h, a), k) for h, a, k in zip(lg["home_team"], lg["away_team"], lg["kickoff"])]
+        lg["kickoff"] = [actual.get((h, a, rd), k)
+                         for h, a, rd, k in zip(lg["home_team"], lg["away_team"], lg["round"], lg["kickoff"])]
         kickoff_utc = pd.to_datetime(lg["kickoff"]).dt.tz_localize("Europe/London").dt.tz_convert("UTC")
         lg = lg[pd.to_datetime(lg["run_timestamp"], utc=True) < kickoff_utc].sort_values("run_timestamp")
         for r in lg.itertuples():
-            live_fc[(r.home_team, r.away_team)] = [r.p_home, r.p_draw, r.p_away]
+            live_fc[(r.home_team, r.away_team, r.round)] = [r.p_home, r.p_draw, r.p_away]
 
     rows = []
     for r in bt.itertuples():
-        key = (r.HomeTeam, r.AwayTeam)
+        key = (r.HomeTeam, r.AwayTeam, int(r.RoundNumber))
         p = live_fc.get(key, [r.p_home, r.p_draw, r.p_away])
         y = OUTCOMES.index(r.FTR)
         b365 = [r.B365HomeOdds, r.B365DrawOdds, r.B365AwayOdds]

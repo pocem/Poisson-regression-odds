@@ -9,10 +9,12 @@ so training and prediction inputs always match. Only the columns the model and
 its Bet365 evaluation use are kept (Bivariate_Poisson.DATASET_COLUMNS).
 
     python src/pipeline/build_dataset.py --league bundesliga     (or: all)
+    python src/pipeline/build_dataset.py --league bundesliga --overwrite   # replace an existing one
 
 Note: the Premier League's all_seasons.csv came from the ML project's 2014+
 build, so its early-23-24 rolling features carry over from 22-23. Rebuilding it
 here starts the carryover at 23-24 instead (the first season in its raw/ folder).
+That's why an existing dataset is only replaced with --overwrite.
 """
 
 import argparse
@@ -55,7 +57,13 @@ def build_dataset(league):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--league", required=True, help="league id, or 'all'")
-    for league in leagues_from_arg(parser.parse_args().league):
+    parser.add_argument("--overwrite", action="store_true", help="replace an existing all_seasons.csv")
+    args = parser.parse_args()
+    for league in leagues_from_arg(args.league):
+        if os.path.exists(league.processed_file) and not args.overwrite:
+            print(f"{league.name}: {os.path.relpath(league.processed_file, ROOT)} already exists -- skipped "
+                  f"(pass --overwrite to rebuild it)")
+            continue
         build_dataset(league)
 
 

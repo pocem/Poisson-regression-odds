@@ -1,0 +1,14 @@
+{
+  "model": "ligue_1",
+  "league": "Ligue 1",
+  "train_seasons": [
+    "23-24",
+    "24-25",
+    "25-26"
+  ],
+  "n_train": 918,
+  "training_fingerprint": "84f1c19f3d20",
+  "trained_at": "2026-10-09T13:01:37+00:00",
+  "home_adv": 0.287208,
+  "theta": -1.82961
+}

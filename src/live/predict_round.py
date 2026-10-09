@@ -340,7 +340,8 @@ def run_league(league, args):
     lam1, lam2, lam3 = lambdas(model, predict_df)
 
     run_ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    fixture_info = upcoming.set_index(["HomeTeam", "AwayTeam"])
+    # One row per pairing (a feed can list the same pairing twice; only the earliest is upcoming here).
+    fixture_info = upcoming.sort_values("Kickoff").drop_duplicates(["HomeTeam", "AwayTeam"]).set_index(["HomeTeam", "AwayTeam"])
     rows = []
     for i, fx in enumerate(predict_df.itertuples(index=False)):
         p_h, p_d, p_a = proba[i]

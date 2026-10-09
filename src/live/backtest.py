@@ -34,6 +34,11 @@ def season_backtest(league, fixtures, history_seasons=None):
     live = pd.read_csv(league.live_season_file, parse_dates=["Date"]).merge(
         fixtures[["RoundNumber", "Kickoff", "HomeTeam", "AwayTeam"]], on=["HomeTeam", "AwayTeam"], how="left",
     )
+    # The same pairing can appear twice in a fixture feed (a feed error, or a
+    # rearranged match): keep the fixture whose kickoff is closest to the match date.
+    live["_gap"] = (live["Kickoff"].dt.normalize() - live["Date"]).abs()
+    live = (live.sort_values("_gap").drop_duplicates(["Date", "HomeTeam", "AwayTeam"])
+            .drop(columns="_gap"))
     missing = live[live["RoundNumber"].isna()]
     if not missing.empty:
         raise ValueError(f"played matches not in the fixture feed: {missing[['HomeTeam', 'AwayTeam']].values.tolist()}")

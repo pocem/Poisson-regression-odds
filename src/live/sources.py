@@ -115,14 +115,17 @@ def understat_rows(league, data):
     ]
 
 
-XG_DATE_TOLERANCE_DAYS = 2
+XG_DATE_TOLERANCE_DAYS = 14  # covers suspended-and-resumed matches (e.g. Udinese v Roma 2024: 14 -> 25 Apr)
 
 
 def align_xg_dates(xg, match_keys):
-    """Understat occasionally files a match under a neighbouring date (e.g.
-    St. Pauli v Holstein Kiel, played Friday 2024-11-29, is listed on the 30th).
-    Moves such an xG row onto the team's football-data.co.uk match date when the
-    two are at most XG_DATE_TOLERANCE_DAYS apart and neither has a partner.
+    """Understat occasionally files a match under a different date than
+    football-data.co.uk: a day off (St. Pauli v Holstein Kiel, played Friday
+    2024-11-29, is listed on the 30th) or the original date of a match that was
+    suspended and finished later (Udinese v Roma: 14 Apr / 25 Apr 2024). Moves
+    such an xG row onto the team's football-data.co.uk match date when the two
+    are at most XG_DATE_TOLERANCE_DAYS apart and NEITHER has a partner on its
+    own date -- so a team's other matches can never be mixed up.
     xg: DataFrame with Team, Date_str; match_keys: iterable of (team, 'YYYY-MM-DD')."""
     match_keys = set(match_keys)
     have = set(zip(xg["Team"], xg["Date_str"]))

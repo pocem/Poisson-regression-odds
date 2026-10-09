@@ -1,7 +1,8 @@
 ## Live round-by-round predictions
 
-Each league has its own frozen bivariate Poisson model. Leagues so far: **Premier League**
-(`premier_league`) and **Bundesliga** (`bundesliga`), configured in `src/leagues.py`.
+Each league has its own frozen bivariate Poisson model. Leagues: **Premier League**
+(`premier_league`), **Bundesliga** (`bundesliga`), **La Liga** (`la_liga`), **Serie A** (`serie_a`)
+and **Ligue 1** (`ligue_1`), configured in `src/leagues.py`.
 
 ```
 python src/live/predict_round.py                           # every league, next upcoming round
@@ -48,7 +49,9 @@ next season automatically.
    name maps from each source to football-data.co.uk's team names.
 2. Download its history: `python src/pipeline/download_history.py --league <id> --seasons 23-24 24-25 25-26`
 3. Put ClubElo ratings in `external/elo_df.csv` and/or starting Elos in `external/elo_seeds_manual.csv`.
-4. Build the training data: `python src/pipeline/build_dataset.py --league <id>`
+4. Build the training data: `python src/pipeline/build_dataset.py --league <id>` (an existing
+   dataset is only replaced with `--overwrite` -- the Premier League's came from the ML project's
+   longer history and can't be rebuilt identically)
 5. Run `python src/live/predict_round.py --league <id>` -- it trains the model and predicts.
    The website picks the league up automatically.
 
