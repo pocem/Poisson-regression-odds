@@ -1,8 +1,6 @@
 {
-  "run_timestamp": "2026-10-09T22:27:18+00:00",
-  "status": "predicted",
-  "message": "Predicted 8 fixture(s) for round 6.",
-  "round": 6,
-  "forced": false,
-  "problems": []
+  "run_timestamp": "2026-10-10T11:27:52+00:00",
+  "status": "unchanged",
+  "message": "Round 6 already predicted from the latest data.",
+  "round": 6
 }
