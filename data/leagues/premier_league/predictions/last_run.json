@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-10T11:27:30+00:00",
-  "status": "unchanged",
-  "message": "Round 6 already predicted from the latest data.",
-  "round": 6
+  "run_timestamp": "2026-10-12T13:38:52+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 9 played match(es): Arsenal v Leeds (round 6), Aston Villa v Brentford (round 6), Chelsea v Bournemouth (round 6), Ipswich v Fulham (round 6), Sunderland v Brighton (round 6), Man United v Tottenham (round 6), Crystal Palace v Nott'm Forest (round 6), Hull v Everton (round 6), Liverpool v Man City (round 6)"
+  ]
 }

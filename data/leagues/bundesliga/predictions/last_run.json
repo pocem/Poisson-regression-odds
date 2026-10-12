@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-10T11:27:36+00:00",
-  "status": "unchanged",
-  "message": "Round 5 already predicted from the latest data.",
-  "round": 5
+  "run_timestamp": "2026-10-12T13:38:55+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 9 played match(es): Dortmund v Werder Bremen (round 5), Paderborn v Stuttgart (round 5), Union Berlin v Elversberg (round 5), Mainz v Leverkusen (round 5), Augsburg v Bayern Munich (round 5), Hoffenheim v Hamburg (round 5), RB Leipzig v Ein Frankfurt (round 5), FC Koln v M'gladbach (round 5), Freiburg v Schalke 04 (round 5)"
+  ]
 }

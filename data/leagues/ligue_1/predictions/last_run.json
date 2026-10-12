@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-10T11:27:52+00:00",
-  "status": "unchanged",
-  "message": "Round 6 already predicted from the latest data.",
-  "round": 6
+  "run_timestamp": "2026-10-12T13:39:05+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 9 played match(es): Lens v Lyon (round 6), Lille v Le Havre (round 6), Brest v Angers (round 6), Lorient v Paris FC (round 6), Monaco v Toulouse (round 6), Paris SG v Le Mans (round 6), Nice v Strasbourg (round 6), Rennes v Auxerre (round 6), Troyes v Marseille (round 6)"
+  ]
 }
