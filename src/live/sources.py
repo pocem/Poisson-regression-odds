@@ -52,11 +52,24 @@ def fetch_fixtures(league, season):
     """Every fixture of `season`, played and unplayed, with round numbers.
     Kickoff is converted from UTC to UK time -- the clock football-data.co.uk
     uses for every league -- so Date/Time line up across sources."""
-    url = FIXTURES_URL.format(slug=league.fixtures_slug.format(year=season_start_year(season)))
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
+    year = season_start_year(season)
+    url = FIXTURES_URL.format(slug=league.fixtures_slug.format(year=year))
+    cache_path = league.fixtures_cache(year)
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except (requests.RequestException, ValueError) as e:
+        if not os.path.exists(cache_path):
+            raise
+        print(f"  WARNING: fixturedownload.com unreachable ({e}); using cached {cache_path}")
+        with open(cache_path, encoding="utf-8") as f:
+            data = json.load(f)
 
-    df = pd.DataFrame(resp.json())
+    df = pd.DataFrame(data)
     utc = pd.to_datetime(df["DateUtc"], utc=True)
     kickoff = utc.dt.tz_convert("Europe/London").dt.tz_localize(None)
     df["Kickoff"] = kickoff

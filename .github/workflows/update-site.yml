@@ -23,6 +23,9 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +38,10 @@ jobs:
       - run: python -m pip install -r requirements.txt
 
       - name: Predict next round
+        id: predict
+        # A crash in one league must not stop the others' data and the site
+        # from being published -- the failure is reported in the last step.
+        continue-on-error: true
         run: |
           set +e
           python src/live/predict_round.py --skip-if-unchanged
@@ -67,12 +74,11 @@ jobs:
         with:
           path: generated_site
 
-  deploy:
-    needs: update
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Report a failed prediction step
+        if: steps.predict.outcome == 'failure'
+        run: |
+          echo "::error::Predicting failed for at least one league (see the 'Predict next round' step). The site was still updated."
+          exit 1

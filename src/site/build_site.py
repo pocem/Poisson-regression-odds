@@ -9,6 +9,9 @@ section per league (src/leagues.py) and a league switcher:
                  (processed/live_season.csv)
   - Elo table    current self-computed ratings
   - status       outcome of the last pipeline run (predictions/last_run.json)
+  - differences  across all leagues, the TOP_DIFFERENCES upcoming outcomes where the
+                 model rates the outcome most above Bet365 (difference in chance,
+                 percentage points), with the expected value at Bet365's odds
 
 Fills the template next to this script (page_template.html -- the page's
 source: layout, styling, charts) with the data, and writes the finished,
@@ -47,6 +50,7 @@ FAVICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.svg"
 OUT_DIR = os.path.join(ROOT, "generated_site")
 UPCOMING_ODDS_URL = "https://www.football-data.co.uk/fixtures.csv"
 OUTCOMES = ["H", "D", "A"]
+TOP_DIFFERENCES = 10
 
 
 def fair_probs(odds):
@@ -121,6 +125,7 @@ def next_round(log, fixtures, b365_odds):
             "elo": [num(r.home_elo, 0), num(r.away_elo, 0)],
             "scores": top_scorelines(r.scoreline_fair_odds_json),
             "b365": b365, "b365_fair": [round(1 / x, 2) for x in b365_fair] if b365_fair else None,
+            "b365_prob": [round(x, 4) for x in b365_fair] if b365_fair else None,
             "edge": [round(p[i] - b365_fair[i], 4) for i in range(3)] if b365_fair else None,
         })
     rounds = latest["round"].value_counts()
@@ -237,6 +242,40 @@ def league_data(league, all_odds):
     }
 
 
+def top_differences(leagues, now, n=TOP_DIFFERENCES):
+    """Every outcome (home win / draw / away win) of every upcoming match that
+    has Bet365 odds, ranked by how much higher the model rates it than Bet365:
+        difference = model probability - Bet365 probability (margin removed)
+    Each row also carries the expected value at Bet365's POSTED odds,
+        EV = model probability x Bet365 odds - 1,
+    which includes the margin (ranking by EV would favour long-odds outsiders)."""
+    rows = []
+    for lg in leagues:
+        nx = lg["next"]
+        if not nx:
+            continue
+        for g in nx["games"]:
+            if not g["b365"] or any(o is None for o in g["b365"]):
+                continue
+            # Skip anything already kicked off (a "time TBC" fixture counts until its weekend ends).
+            kickoff = pd.Timestamp(g["kickoff"])
+            if (kickoff + pd.Timedelta(days=4 if g["kickoff_tbc"] else 0)) < now:
+                continue
+            labels = [f"{g['home']} win", "Draw", f"{g['away']} win"]
+            for i in range(3):
+                rows.append({
+                    "league": lg["name"], "league_id": lg["id"], "round": g["round"],
+                    "kickoff": g["kickoff"], "kickoff_tbc": g["kickoff_tbc"],
+                    "home": g["home"], "away": g["away"], "outcome": OUTCOMES[i], "label": labels[i],
+                    "p_model": round(g["p"][i], 4), "p_b365": g["b365_prob"][i],
+                    "diff": round(g["p"][i] - g["b365_prob"][i], 4),
+                    "odds_b365": g["b365"][i], "odds_model": g["odds"][i],
+                    "ev": round(g["p"][i] * g["b365"][i] - 1, 4),
+                })
+    rows = [r for r in rows if r["diff"] > 0]  # only outcomes the model rates above Bet365
+    return sorted(rows, key=lambda r: -r["diff"])[:n]
+
+
 def main():
     all_odds = download_upcoming_odds()
     leagues = []
@@ -249,6 +288,7 @@ def main():
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "generated_uk": f"{now_uk():%Y-%m-%d %H:%M}",
         "leagues": leagues,
+        "differences": top_differences(leagues, now_uk()),
     }
     html = open(TEMPLATE, encoding="utf-8").read()
     payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")

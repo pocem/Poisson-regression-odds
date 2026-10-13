@@ -6,7 +6,8 @@ source codes, team-name maps, league size, and where each league's files are.
         raw/            football-data.co.uk season files: 23-24.csv, ..., <live season>_live.csv
         processed/      all_seasons.csv (training data), live_season.csv (played live-season matches)
         external/       elo_df.csv (ClubElo ratings by date), elo_seeds_manual.csv (hand-entered starting Elos)
-        cache/          understat_<year>.json (xG), upcoming_odds.csv (Bet365 odds for upcoming fixtures)
+        cache/          understat_<year>.json (xG), fixtures_<year>.json (fixture list),
+                        upcoming_odds.csv (Bet365 odds for upcoming fixtures)
         predictions/    predictions_log.csv, last_run.json, <season>_model_odds.csv
     data/models/<league id>.npz / .json    the league's frozen model
 
@@ -60,6 +61,9 @@ class League:
 
     def understat_cache(self, year):
         return self.path("cache", f"understat_{year}.json")
+
+    def fixtures_cache(self, year):
+        return self.path("cache", f"fixtures_{year}.json")
 
     @property
     def processed_file(self):

@@ -405,10 +405,12 @@ def main():
         except NotReady:
             not_ready.append(league.name)
             print(f"{league.name}: stopping -- rerun once the sources catch up, or pass --force to predict anyway.")
-        except Exception:
+        except Exception as e:
             # Keep going so one league's failure doesn't block the others.
             crashed.append(league.name)
             traceback.print_exc()
+            write_status(league, "error", f"The last run failed ({type(e).__name__}: {e}); "
+                                          f"showing the previous predictions.")
 
     if crashed:
         raise SystemExit(f"Failed: {', '.join(crashed)}")

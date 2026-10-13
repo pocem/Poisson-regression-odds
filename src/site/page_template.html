@@ -139,7 +139,15 @@ section { margin-top: 36px; }
 .book { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--grid); font-size: 13px; color: var(--ink-2); }
 .book table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .book td { padding: 2px 0; }
-.book td:not(:first-child) { text-align: right; width: 22%; }
+.book td:not(:first-child) { text-align: right; width: 21%; }
+.book td:first-child { white-space: nowrap; }
+.book .sep td { border-top: 1px solid var(--grid); padding-top: 4px; }
+.value-section table.data td.outcome-cell { font-weight: 600; color: var(--ink); }
+.value-section a.league-link { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--axis); }
+.value-section a.league-link:hover { color: var(--ink); }
+.value-section a.league-link:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; border-radius: 3px; }
+.ev-pos { color: var(--good); font-weight: 650; }
+.ev-neg { color: var(--muted); }
 .edge-pos { color: var(--good); font-weight: 600; }
 .edge-neg { color: var(--muted); }
 details.more { margin-top: 10px; font-size: 13px; color: var(--ink-2); }
@@ -247,6 +255,23 @@ footer p { margin: 6px 0; }
     </div>
     <div class="meta"><span id="updated"></span> &nbsp;<button class="theme-toggle" id="themeBtn" type="button">Theme</button></div>
   </header>
+  <section id="value" class="value-section">
+    <div class="section-head">
+      <div><h2>Biggest differences vs Bet365 · all leagues</h2><p id="valueSub"></p></div>
+    </div>
+    <div class="card table-wrap">
+      <table class="data">
+        <thead><tr>
+          <th class="num">#</th><th>League</th><th>Kickoff</th><th>Match</th><th>Outcome</th>
+          <th class="num">Model<br>chance</th><th class="num">Bet365<br>chance</th><th class="num">Difference</th>
+          <th class="num">Bet365<br>odds</th><th class="num">Model<br>odds</th><th class="num">Expected<br>value</th>
+        </tr></thead>
+        <tbody id="valueRows"></tbody>
+      </table>
+    </div>
+    <p class="footnote">Ranked by <b>difference</b>: the model's chance minus Bet365's, in percentage points (pts). <b>Bet365 chance</b> is Bet365's odds with the bookmaker margin removed. <b>Expected value</b> is model chance × Bet365's posted odds − 1, the average return per unit staked <i>if the model's chance is right</i>; it includes Bet365's margin, so a positive difference can still have negative expected value. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
+  </section>
+
   <nav class="league-tabs" id="leagueTabs" role="tablist" aria-label="League"></nav>
   <div id="status"></div>
 
@@ -386,7 +411,7 @@ footer p { margin: 6px 0; }
     const probs = (st.problems || []).length && st.status === "not_ready"
       ? "<ul>" + st.problems.map((p) => `<li>${esc(p)}</li>`).join("") + "</ul>" : "";
     $("status").innerHTML = `<div class="status ${ok ? "ok" : "warn"}" role="status"><span class="icon">${ok ? "✓" : "!"}</span>
-      <div><strong>${ok ? "Up to date" : st.status === "not_ready" ? "Waiting for data" : "Note"}</strong> — ${esc(st.message)}
+      <div><strong>${ok ? "Up to date" : st.status === "not_ready" ? "Waiting for data" : st.status === "error" ? "Pipeline error" : "Note"}</strong> — ${esc(st.message)}
       <span style="opacity:.8"> (pipeline ran ${esc(when)})</span>${probs}</div></div>`;
   }
 
@@ -402,13 +427,15 @@ footer p { margin: 6px 0; }
     $("nextTitle").textContent = `Round ${nx.round}`;
     const anyBook = nx.games.some((g) => g.b365);
     $("nextSub").textContent = `Predicted ${new Date(nx.predicted_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. ` +
-      (anyBook ? "Bet365 odds shown with the margin removed. Edge = model probability minus Bet365's." : "Bet365 odds appear here once football-data.co.uk posts them (Fridays for weekend rounds).");
+      (anyBook ? "Bet365 chance = its odds with the bookmaker margin removed. Model − Bet365 = the model's chance minus Bet365's, in percentage points (pts): e.g. model 47%, Bet365 35% → +12 pts."
+               : "Bet365 odds appear here once football-data.co.uk posts them (Tuesdays for midweek rounds, Fridays for weekend rounds).");
     $("games").innerHTML = nx.games.map((g) => {
       const extra = g.round !== nx.round ? ` · rearranged from round ${g.round}` : "";
       const book = g.b365 ? `<div class="book"><table>
           <tr><td></td><td>Home</td><td>Draw</td><td>Away</td></tr>
-          <tr><td>Bet365</td>${g.b365_fair.map((o) => `<td>${odd(o)}</td>`).join("")}</tr>
-          <tr><td>Edge</td>${g.edge.map((e) => `<td class="${e > 0 ? "edge-pos" : "edge-neg"}">${e > 0 ? "▲ +" : ""}${(e * 100).toFixed(1)} pp</td>`).join("")}</tr>
+          <tr><td>Bet365 odds</td>${g.b365.map((o) => `<td>${odd(o)}</td>`).join("")}</tr>
+          <tr><td>Bet365 chance</td>${g.b365_prob.map((q) => `<td>${pct(q)}</td>`).join("")}</tr>
+          <tr class="sep"><td title="Model's chance minus Bet365's (margin removed), in percentage points">Model − Bet365</td>${g.edge.map((e) => `<td class="${e > 0 ? "edge-pos" : "edge-neg"}">${e > 0 ? "▲ +" : ""}${(e * 100).toFixed(1)} pts</td>`).join("")}</tr>
         </table></div>` : "";
       return `<article class="card game">
         <div class="when"><span>${esc(g.kickoff_tbc ? `Weekend of ${fmtDate(g.kickoff)} · kickoff TBC` : fmtKick(g.kickoff))}${esc(extra)}</span><span>Elo ${g.elo[0] ?? "–"} – ${g.elo[1] ?? "–"}</span></div>
@@ -577,6 +604,35 @@ footer p { margin: 6px 0; }
         <span class="chg ${cls}">${c > 0.5 ? "▲ +" : c < -0.5 ? "▼ " : ""}${Math.round(c)}</span></div>`;
     }).join("");
   }
+
+  // ---------- biggest differences vs Bet365 (all leagues) ----------
+  function renderValue() {
+    const rows = ALL.differences || [];
+    if (!rows.length) {
+      $("valueSub").textContent = "";
+      $("valueRows").innerHTML = `<tr><td colspan="11" class="dim">Nothing to compare yet: Bet365 odds for the upcoming matches aren't posted (football-data.co.uk adds them on Tuesdays for midweek rounds and Fridays for weekend rounds), or the model rates no outcome above Bet365.</td></tr>`;
+      return;
+    }
+    $("valueSub").textContent = `The ${rows.length} upcoming outcomes the model rates most above Bet365, biggest difference first.`;
+    $("valueRows").innerHTML = rows.map((r, i) => {
+      const when = r.kickoff_tbc ? `Weekend of ${fmtDate(r.kickoff)}` : fmtKick(r.kickoff);
+      const ev = r.ev * 100;
+      return `<tr>
+        <td class="num dim">${i + 1}</td>
+        <td><a class="league-link" href="#${esc(r.league_id)}">${esc(r.league)}</a></td>
+        <td>${esc(when)}</td>
+        <td>${esc(r.home)} – ${esc(r.away)}</td>
+        <td class="outcome-cell">${esc(r.label)}</td>
+        <td class="num">${pct1(r.p_model)}</td>
+        <td class="num">${pct1(r.p_b365)}</td>
+        <td class="num">${r.diff > 0 ? "+" : ""}${(r.diff * 100).toFixed(1)} pts</td>
+        <td class="num">${odd(r.odds_b365)}</td>
+        <td class="num">${odd(r.odds_model)}</td>
+        <td class="num ${ev > 0 ? "ev-pos" : "ev-neg"}">${ev > 0 ? "▲ +" : ""}${ev.toFixed(1)}%</td>
+      </tr>`;
+    }).join("");
+  }
+  renderValue();
 
   selectFromHash();
 })();
