@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-12T13:38:58+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
-  "problems": [
-    "football-data.co.uk is missing 8 played match(es): Malaga v Espanol (round 8), Alaves v Ath Madrid (round 8), Barcelona v Getafe (round 8), Real Madrid v Villarreal (round 8), Elche v Celta (round 8), Sociedad v La Coruna (round 8), Betis v Osasuna (round 8), Santander v Valencia (round 8)"
-  ]
+  "run_timestamp": "2026-10-13T09:56:27+00:00",
+  "status": "predicted",
+  "message": "Predicted 10 fixture(s) for round 9.",
+  "round": 9,
+  "forced": false,
+  "problems": []
 }
