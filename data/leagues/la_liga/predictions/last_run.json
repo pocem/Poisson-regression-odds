@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-16T20:43:28+00:00",
-  "status": "unchanged",
-  "message": "Round 9 already predicted from the latest data.",
-  "round": 9
+  "run_timestamp": "2026-10-17T09:47:19+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 1 played match(es): La Coruna v Levante (round 9)"
+  ]
 }
