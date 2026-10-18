@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-17T09:47:24+00:00",
+  "run_timestamp": "2026-10-18T09:59:28+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Le Mans v Toulouse (round 7)"
+    "football-data.co.uk is missing 4 played match(es): Le Mans v Toulouse (round 7), Strasbourg v Paris SG (round 7), Lille v Brest (round 7), Troyes v Lens (round 7)"
   ]
 }

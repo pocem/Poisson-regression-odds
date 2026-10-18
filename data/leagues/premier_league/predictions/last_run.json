@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-17T09:47:14+00:00",
-  "status": "unchanged",
-  "message": "Round 7 already predicted from the latest data.",
-  "round": 7
+  "run_timestamp": "2026-10-18T09:59:15+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 5 played match(es): Everton v Chelsea (round 7), Brentford v Liverpool (round 7), Fulham v Hull (round 7), Man City v Ipswich (round 7), Newcastle v Aston Villa (round 7)"
+  ]
 }
