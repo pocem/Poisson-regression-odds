@@ -69,10 +69,10 @@ take priority; ClubElo is only contacted to seed a team with no rating yet.
 Tuesday and Friday evenings, when bookmaker odds for the next round are posted), commits the
 updated data, and publishes a static page to GitHub Pages with a league switcher and, per league:
 
-- the next round's probabilities, fair odds, likeliest scorelines and expected goals,
-  next to Bet365's odds (margin removed) once they're posted, with the model's edge;
+- the next round's probabilities, odds, likeliest scorelines and expected goals,
+  next to Bet365's odds once they're posted, with the difference between the two;
 - season performance against Bet365 (log loss, Brier score, favourite-won rate, log loss by round);
-- every played match with model and Bet365 odds (margin removed), the result and each forecaster's log loss;
+- every played match with model and Bet365 odds, the result and each forecaster's log loss;
 - the current Elo table.
 
 A run only logs new predictions when the inputs changed (`--skip-if-unchanged`), and a

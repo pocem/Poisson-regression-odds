@@ -51,15 +51,32 @@ OUT_DIR = os.path.join(ROOT, "generated_site")
 UPCOMING_ODDS_URL = "https://www.football-data.co.uk/fixtures.csv"
 OUTCOMES = ["H", "D", "A"]
 TOP_DIFFERENCES = 10
+# Our odds are priced so that the outcomes' chances add up to 1 + MARGIN; every
+# chance is scaled by the same factor, so favourites and outsiders keep their ratio.
+MARGIN = 0.06
 
 
-def fair_probs(odds):
-    """Bookmaker odds -> margin-free probabilities (proportional de-vig)."""
+def priced(p):
+    """Model probability -> the chance shown on the site (scaled by 1 + MARGIN)."""
+    return p * (1 + MARGIN)
+
+
+def priced_odds(p):
+    return round(1 / priced(p), 2) if p > 1e-12 else None
+
+
+def implied_probs(odds):
+    """Bookmaker odds -> chances as posted (1 / odds; they add up to more than 1)."""
     odds = np.asarray(odds, dtype=float)
     if np.isnan(odds).any():
         return None
-    inv = 1 / odds
-    return (inv / inv.sum()).tolist()
+    return (1 / odds).tolist()
+
+
+def scoring_probs(odds):
+    """Bookmaker odds -> probabilities that add up to 1, for log loss and Brier score."""
+    inv = implied_probs(odds)
+    return None if inv is None else [x / sum(inv) for x in inv]
 
 
 def num(x, digits=4):
@@ -95,7 +112,7 @@ def upcoming_bet365_odds(league, all_odds):
 def top_scorelines(json_str, n=6):
     odds = json.loads(json_str)
     probs = sorted(((1 / o, s) for s, o in odds.items() if o), reverse=True)[:n]
-    return [{"score": s, "p": round(p, 4)} for p, s in probs]
+    return [{"score": s, "p": round(priced(p), 4), "odds": priced_odds(p)} for p, s in probs]
 
 
 def next_round(log, fixtures, b365_odds):
@@ -116,17 +133,18 @@ def next_round(log, fixtures, b365_odds):
     for r in latest.sort_values("kickoff").itertuples():
         p = [r.p_home, r.p_draw, r.p_away]
         b365 = b365_odds.get((r.home_team, r.away_team))
-        b365_fair = fair_probs(b365) if b365 else None
+        b365_p = implied_probs(b365) if b365 else None
+        shown = [priced(x) for x in p]
         games.append({
             "round": int(r.round), "kickoff": str(r.kickoff), "home": r.home_team, "away": r.away_team,
             "kickoff_tbc": bool(tbc.get((r.home_team, r.away_team, r.round), False)),
-            "p": p, "odds": [r.fair_odds_home, r.fair_odds_draw, r.fair_odds_away],
+            "p_model": p, "p": [round(x, 4) for x in shown], "odds": [priced_odds(x) for x in p],
             "xg": [num(r.lambda_home + r.lambda_shared, 2), num(r.lambda_away + r.lambda_shared, 2)],
             "elo": [num(r.home_elo, 0), num(r.away_elo, 0)],
             "scores": top_scorelines(r.scoreline_fair_odds_json),
-            "b365": b365, "b365_fair": [round(1 / x, 2) for x in b365_fair] if b365_fair else None,
-            "b365_prob": [round(x, 4) for x in b365_fair] if b365_fair else None,
-            "edge": [round(p[i] - b365_fair[i], 4) for i in range(3)] if b365_fair else None,
+            "b365": b365,
+            "b365_prob": [round(x, 4) for x in b365_p] if b365_p else None,
+            "edge": [round(shown[i] - b365_p[i], 4) for i in range(3)] if b365_p else None,
         })
     rounds = latest["round"].value_counts()
     return {"round": int(rounds.idxmax()), "predicted_at": latest["run_timestamp"].iloc[0], "games": games}
@@ -156,14 +174,13 @@ def season_matches(league, fixtures, log):
         p = live_fc.get(key, [r.p_home, r.p_draw, r.p_away])
         y = OUTCOMES.index(r.FTR)
         b365 = [r.B365HomeOdds, r.B365DrawOdds, r.B365AwayOdds]
-        b365_f = fair_probs(b365)
+        b365_f = scoring_probs(b365)
         rows.append({
             "round": int(r.RoundNumber), "kickoff": str(r.Kickoff), "home": r.HomeTeam, "away": r.AwayTeam,
             "score": [int(r.FTHG), int(r.FTAG)], "result": r.FTR,
             "source": "live" if key in live_fc else "backtest",
-            "p": [round(x, 4) for x in p], "odds": [round(1 / x, 2) for x in p],
+            "p": [round(x, 4) for x in p], "odds": [priced_odds(x) for x in p],
             "b365": [num(x, 2) for x in b365],
-            "b365_fair": [round(1 / x, 2) for x in b365_f] if b365_f else [None] * 3,
             "pick": OUTCOMES[int(np.argmax(p))],
             "ll": {"model": -math.log(p[y]),
                    "b365": -math.log(b365_f[y]) if b365_f else None},
@@ -245,10 +262,10 @@ def league_data(league, all_odds):
 def top_differences(leagues, now, n=TOP_DIFFERENCES):
     """Every outcome (home win / draw / away win) of every upcoming match that
     has Bet365 odds, ranked by how much higher the model rates it than Bet365:
-        difference = model probability - Bet365 probability (margin removed)
-    Each row also carries the expected value at Bet365's POSTED odds,
-        EV = model probability x Bet365 odds - 1,
-    which includes the margin (ranking by EV would favour long-odds outsiders)."""
+        difference = model chance - Bet365 chance (both as shown on the site)
+    Each row also carries the expected value at Bet365's odds,
+        EV = model probability x Bet365 odds - 1
+    (ranking by EV would favour long-odds outsiders)."""
     rows = []
     for lg in leagues:
         nx = lg["next"]
@@ -267,10 +284,10 @@ def top_differences(leagues, now, n=TOP_DIFFERENCES):
                     "league": lg["name"], "league_id": lg["id"], "round": g["round"],
                     "kickoff": g["kickoff"], "kickoff_tbc": g["kickoff_tbc"],
                     "home": g["home"], "away": g["away"], "outcome": OUTCOMES[i], "label": labels[i],
-                    "p_model": round(g["p"][i], 4), "p_b365": g["b365_prob"][i],
-                    "diff": round(g["p"][i] - g["b365_prob"][i], 4),
+                    "p_model": g["p"][i], "p_b365": g["b365_prob"][i],
+                    "diff": g["edge"][i],
                     "odds_b365": g["b365"][i], "odds_model": g["odds"][i],
-                    "ev": round(g["p"][i] * g["b365"][i] - 1, 4),
+                    "ev": round(g["p_model"][i] * g["b365"][i] - 1, 4),
                 })
     rows = [r for r in rows if r["diff"] > 0]  # only outcomes the model rates above Bet365
     return sorted(rows, key=lambda r: -r["diff"])[:n]

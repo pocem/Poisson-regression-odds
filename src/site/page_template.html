@@ -269,7 +269,7 @@ footer p { margin: 6px 0; }
         <tbody id="valueRows"></tbody>
       </table>
     </div>
-    <p class="footnote">Ranked by <b>difference</b>: the model's chance minus Bet365's, in percentage points (pts). <b>Bet365 chance</b> is Bet365's odds with the bookmaker margin removed. <b>Expected value</b> is model chance × Bet365's posted odds − 1, the average return per unit staked <i>if the model's chance is right</i>; it includes Bet365's margin, so a positive difference can still have negative expected value. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
+    <p class="footnote">Ranked by <b>difference</b>: the model's chance minus Bet365's, in percentage points (pts). <b>Bet365 chance</b> is 1 ÷ Bet365's odds. <b>Expected value</b> is the average return per unit staked at Bet365's odds <i>if the model is right</i>; a positive difference can still have negative expected value. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
   </section>
 
   <nav class="league-tabs" id="leagueTabs" role="tablist" aria-label="League"></nav>
@@ -311,7 +311,7 @@ footer p { margin: 6px 0; }
 
   <section id="matches">
     <div class="section-head">
-      <div><h2>Every match</h2><p>Both model and Bet365 odds are margin-free: Bet365's margin is removed proportionally so the two compare directly. The model's log loss is green where it beat Bet365 and red where Bet365 did better.</p></div>
+      <div><h2>Every match</h2><p>Model odds next to Bet365's odds. The model's log loss is green where it beat Bet365 and red where Bet365 did better.</p></div>
       <div class="filters">
         <select id="roundFilter" aria-label="Filter by round"></select>
         <select id="teamFilter" aria-label="Filter by team"></select>
@@ -321,7 +321,7 @@ footer p { margin: 6px 0; }
       <table class="data">
         <thead><tr>
           <th>Rd</th><th>Date</th><th>Match</th><th class="num">Score</th>
-          <th class="num">Model H / D / A</th><th class="num">Bet365 H / D / A<br><span style="font-weight:400">margin removed</span></th>
+          <th class="num">Model H / D / A</th><th class="num">Bet365 H / D / A</th>
           <th>Pick</th><th class="num">Log loss<br>model</th><th class="num">Log loss<br>Bet365</th>
         </tr></thead>
         <tbody id="matchRows"></tbody>
@@ -340,7 +340,7 @@ footer p { margin: 6px 0; }
   <footer>
     <p><strong>How it works.</strong> Each league has its own model. A bivariate Poisson regression predicts each side's goals from Elo, rolling xG and xGA, points per game and shots-on-target difference. The model is trained once on the last three completed seasons and stays frozen for the whole season; each round only its inputs are updated with the latest results, so this season's form reaches it through Elo, xG, points per game and shots, not through refitting. Its goal predictions are turned into home / draw / away probabilities and scoreline odds.</p>
     <p><strong>Played matches.</strong> Each shows the prediction logged before kickoff where one exists; otherwise it is recreated with the same frozen model and only the data available before that match.</p>
-    <p>Data: football-data.co.uk (results, stats, Bet365 odds), Understat (xG), fixturedownload.com (fixtures). Bet365's margin is removed proportionally, so its odds and probabilities compare directly with the model's.</p>
+    <p>Data: football-data.co.uk (results, stats, Bet365 odds), Understat (xG), fixturedownload.com (fixtures).</p>
   </footer>
 </div>
 
@@ -427,7 +427,7 @@ footer p { margin: 6px 0; }
     $("nextTitle").textContent = `Round ${nx.round}`;
     const anyBook = nx.games.some((g) => g.b365);
     $("nextSub").textContent = `Predicted ${new Date(nx.predicted_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. ` +
-      (anyBook ? "Bet365 chance = its odds with the bookmaker margin removed. Model − Bet365 = the model's chance minus Bet365's, in percentage points (pts): e.g. model 47%, Bet365 35% → +12 pts."
+      (anyBook ? "Bet365 chance = 1 ÷ its odds. Model − Bet365 = the model's chance minus Bet365's, in percentage points (pts): e.g. model 47%, Bet365 35% → +12 pts."
                : "Bet365 odds appear here once football-data.co.uk posts them (Tuesdays for midweek rounds, Fridays for weekend rounds).");
     $("games").innerHTML = nx.games.map((g) => {
       const extra = g.round !== nx.round ? ` · rearranged from round ${g.round}` : "";
@@ -435,13 +435,13 @@ footer p { margin: 6px 0; }
           <tr><td></td><td>Home</td><td>Draw</td><td>Away</td></tr>
           <tr><td>Bet365 odds</td>${g.b365.map((o) => `<td>${odd(o)}</td>`).join("")}</tr>
           <tr><td>Bet365 chance</td>${g.b365_prob.map((q) => `<td>${pct(q)}</td>`).join("")}</tr>
-          <tr class="sep"><td title="Model's chance minus Bet365's (margin removed), in percentage points">Model − Bet365</td>${g.edge.map((e) => `<td class="${e > 0 ? "edge-pos" : "edge-neg"}">${e > 0 ? "▲ +" : ""}${(e * 100).toFixed(1)} pts</td>`).join("")}</tr>
+          <tr class="sep"><td title="Model's chance minus Bet365's, in percentage points">Model − Bet365</td>${g.edge.map((e) => `<td class="${e > 0 ? "edge-pos" : "edge-neg"}">${e > 0 ? "▲ +" : ""}${(e * 100).toFixed(1)} pts</td>`).join("")}</tr>
         </table></div>` : "";
       return `<article class="card game">
         <div class="when"><span>${esc(g.kickoff_tbc ? `Weekend of ${fmtDate(g.kickoff)} · kickoff TBC` : fmtKick(g.kickoff))}${esc(extra)}</span><span>Elo ${g.elo[0] ?? "–"} – ${g.elo[1] ?? "–"}</span></div>
         <div class="teams"><span class="t">${esc(g.home)}</span><span class="vs">vs</span><span class="t away">${esc(g.away)}</span></div>
         <div class="probbar" role="img" aria-label="Home ${pct(g.p[0])}, draw ${pct(g.p[1])}, away ${pct(g.p[2])}">
-          <span class="h" style="width:${g.p[0] * 100}%"></span><span class="d" style="width:${g.p[1] * 100}%"></span><span class="a" style="width:${g.p[2] * 100}%"></span>
+          <span class="h" style="width:${g.p_model[0] * 100}%"></span><span class="d" style="width:${g.p_model[1] * 100}%"></span><span class="a" style="width:${g.p_model[2] * 100}%"></span>
         </div>
         <div class="outcomes">
           <div class="outcome"><span class="pct">${pct(g.p[0])}</span><span class="key h"></span>Home <span class="odd">${odd(g.odds[0])}</span></div>
@@ -450,7 +450,7 @@ footer p { margin: 6px 0; }
         </div>
         ${book}
         <details class="more"><summary>Expected goals ${g.xg[0]} – ${g.xg[1]} · likeliest scores</summary>
-          <div class="scores">${g.scores.map((s) => `<span class="score-chip"><b>${esc(s.score)}</b> ${pct1(s.p)} · ${odd(1 / s.p)}</span>`).join("")}</div>
+          <div class="scores">${g.scores.map((s) => `<span class="score-chip"><b>${esc(s.score)}</b> ${pct1(s.p)} · ${odd(s.odds)}</span>`).join("")}</div>
         </details>
       </article>`;
     }).join("");
@@ -583,7 +583,7 @@ footer p { margin: 6px 0; }
         <td>${esc(m.home)} – ${esc(m.away)}</td>
         <td class="num"><b>${m.score[0]}–${m.score[1]}</b></td>
         <td class="num">${triple(m.odds, m.result)}</td>
-        <td class="num">${triple(m.b365_fair, m.result)}</td>
+        <td class="num">${triple(m.b365, m.result)}</td>
         <td>${m.pick === m.result ? `<span class="mark-ok" title="Model's favourite won">✓</span>` : `<span class="mark-no" title="Model's favourite lost">✗</span>`} ${m.pick}</td>
         <td class="num ${llCls}" title="${llTitle}">${f3(m.ll.model)}</td>
         <td class="num">${f3(m.ll.b365)}</td>
