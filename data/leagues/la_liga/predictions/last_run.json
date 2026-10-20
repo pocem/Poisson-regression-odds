@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-19T11:22:01+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
-  "problems": [
-    "football-data.co.uk is missing 5 played match(es): La Coruna v Levante (round 9), Espanol v Ath Madrid (round 9), Villarreal v Elche (round 9), Betis v Barcelona (round 9), Valencia v Ath Bilbao (round 9)"
-  ]
+  "run_timestamp": "2026-10-20T09:34:34+00:00",
+  "status": "predicted",
+  "message": "Predicted 11 fixture(s) for round 10.",
+  "round": 10,
+  "forced": false,
+  "problems": []
 }

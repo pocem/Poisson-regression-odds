@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-19T11:22:13+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
-  "problems": [
-    "football-data.co.uk is missing 4 played match(es): Le Mans v Toulouse (round 7), Strasbourg v Paris SG (round 7), Lille v Brest (round 7), Troyes v Lens (round 7)"
-  ]
+  "run_timestamp": "2026-10-20T09:34:44+00:00",
+  "status": "predicted",
+  "message": "Predicted 9 fixture(s) for round 8.",
+  "round": 8,
+  "forced": false,
+  "problems": []
 }
