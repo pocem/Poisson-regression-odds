@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-12T13:39:01+00:00",
+  "run_timestamp": "2026-10-19T11:22:09+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 8 played match(es): Genoa v Fiorentina (round 6), Inter v Parma (round 6), Napoli v Frosinone (round 6), Como v Roma (round 6), Lazio v Monza (round 6), Lecce v Bologna (round 6), Sassuolo v Milan (round 6), Cagliari v Juventus (round 6)"
+    "football-data.co.uk is missing 4 played match(es): Frosinone v Sassuolo (round 7), Venezia v Napoli (round 7), Bologna v Inter (round 7), Roma v Genoa (round 7)"
   ]
 }
