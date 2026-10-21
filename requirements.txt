@@ -3,7 +3,6 @@ numpy
 scipy
 scikit-learn
 requests
-anthropic
 streamlit
 plotly
 pytest

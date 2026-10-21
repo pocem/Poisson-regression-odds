@@ -11,7 +11,7 @@ section per league (src/leagues.py) and a league switcher:
   - status       outcome of the last pipeline run (predictions/last_run.json)
   - value        across all leagues, every upcoming outcome whose expected value at
                  Bet365's odds is at least MIN_EV, by the model's probability
-  - summary      Claude's write-up of the round (src/site/round_summary.py)
+  - summary      AI write-up of the round (src/site/round_summary.py)
 
 Fills the template next to this script (page_template.html -- the page's
 source: layout, styling, charts) with the data, and writes the finished,

@@ -1,13 +1,13 @@
 """
-Claude's written summary of the round, shown at the top of the website:
-the upcoming predictions next to Bet365's odds, the outcomes with an expected
-value of at least MIN_EV, and how the model and Bet365 did in each league's
-latest round.
+An AI-written summary of the round (Google's Gemini, free API tier), shown at
+the top of the website: the upcoming predictions next to Bet365's odds, the
+outcomes with an expected value of at least MIN_EV, and how the model and
+Bet365 did in each league's latest round.
 
 The summary is saved to data/summary/round_summary.json together with a hash of
 the data it was written from, and only regenerated when that data changes -- so
-the daily runs don't pay for a new summary when nothing moved. Without an
-ANTHROPIC_API_KEY (or on an API error) the last saved summary is kept.
+the daily runs don't use up the free quota when nothing moved. Without a
+GEMINI_API_KEY (or on an API error) the last saved summary is kept.
 
 Called by build_site.py; to (re)generate it on its own after a site build:
 
@@ -19,11 +19,12 @@ import json
 import os
 from datetime import datetime, timezone
 
-import anthropic
+import requests
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SUMMARY_JSON = os.path.join(ROOT, "data", "summary", "round_summary.json")
-MODEL = "claude-opus-5-5"
+MODEL = "gemini-3.8-flash"  # on the Gemini API's free tier
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 
 SYSTEM = """You write the weekly round summary for a football prediction website. A bivariate \
 Poisson regression model predicts home win / draw / away win chances for Premier League, \
@@ -32,11 +33,12 @@ Bundesliga, La Liga, Serie A and Ligue 1 matches, and the site compares them wit
 You get the data as JSON. Write for football fans who are not statisticians:
 - Open with the round's big picture in one or two sentences.
 - Then the outcomes with high expected value: what the model sees that Bet365 doesn't, \
-grouped or ordered so the strongest cases come first. Only use the numbers you are given.
+strongest cases first.
 - Then, for leagues with played results, how the model and Bet365 did in the latest round \
-(log loss: lower is better), naming notable hits and misses.
-- Keep it to roughly 250-400 words, in short paragraphs of plain text. No markdown, headings, \
-bullet points or tables.
+(log loss: lower is better), picking out the few most notable hits and misses rather than \
+listing them all.
+- Keep it to roughly 300 words, in short paragraphs of plain text. No markdown, headings, \
+bullet points or tables. Quote only the numbers that make a point, not every figure available.
 
 Rules: chances are percentages and odds are decimal odds. Don't discuss bookmaker margins or \
 overrounds, and don't add figures that aren't in the data. Over its test seasons the model has \
@@ -83,7 +85,8 @@ def summary_input(data):
             "latest_played_round": latest,
             "latest_round_results": last_round,
             "season_so_far": None if not s else {
-                "matches": s["n"], "log_loss_model": s["ll_model"], "log_loss_bet365": s["ll_b365"],
+                "matches": s["n"], "log_loss_model": round(s["ll_model"], 3),
+                "log_loss_bet365": None if s["ll_b365"] is None else round(s["ll_b365"], 3),
                 "favourite_won_model_pct": _pct(s["acc_model"]), "favourite_won_bet365_pct": _pct(s["acc_b365"]),
             },
         })
@@ -103,27 +106,36 @@ def load_saved():
 
 
 def write_summary(payload):
-    client = anthropic.Anthropic()
-    response = client.beta.messages.create(
-        model=MODEL,
-        max_tokens=16000,
-        system=SYSTEM,
-        output_config={"effort": "medium"},
-        # On a safety decline, the API re-runs the request on a suitable fallback model.
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
-        messages=[{"role": "user", "content":
-                   "Here is this round's data:\n\n" + json.dumps(payload, ensure_ascii=False, indent=1)
-                   + "\n\nWrite the round summary."}],
+    resp = requests.post(
+        API_URL,
+        headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"], "Content-Type": "application/json"},
+        json={
+            "systemInstruction": {"parts": [{"text": SYSTEM}]},
+            "contents": [{"role": "user", "parts": [{"text":
+                "Here is this round's data:\n\n" + json.dumps(payload, ensure_ascii=False, indent=1)
+                + "\n\nWrite the round summary."}]}],
+            # Generous: on thinking models the reasoning counts towards this limit too.
+            "generationConfig": {"maxOutputTokens": 8192},
+        },
+        timeout=120,
     )
-    if response.stop_reason == "refusal":
-        raise RuntimeError(f"request declined ({response.stop_details})")
-    if response.stop_reason == "max_tokens":
-        raise RuntimeError("summary was cut off at max_tokens")
-    text = "".join(b.text for b in response.content if b.type == "text").strip()
+    if resp.status_code != 200:
+        raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:300]}")
+    body = resp.json()
+    blocked = body.get("promptFeedback", {}).get("blockReason")
+    if blocked:
+        raise RuntimeError(f"prompt blocked ({blocked})")
+    candidates = body.get("candidates") or []
+    if not candidates:
+        raise RuntimeError("no candidates in the response")
+    finish = candidates[0].get("finishReason")
+    if finish not in (None, "STOP"):
+        raise RuntimeError(f"generation stopped early ({finish})")
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text = "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
     if not text:
         raise RuntimeError("empty response")
-    return text, response.model
+    return text, body.get("modelVersion", MODEL)
 
 
 def round_summary(data):
@@ -136,13 +148,13 @@ def round_summary(data):
     if saved and saved.get("input_hash") == digest:
         print("Round summary: data unchanged, keeping the saved summary")
         return saved
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("Round summary: ANTHROPIC_API_KEY not set, keeping the saved summary")
+    if not os.environ.get("GEMINI_API_KEY"):
+        print("Round summary: GEMINI_API_KEY not set, keeping the saved summary")
         return saved
 
     try:
         text, model = write_summary(payload)
-    except (anthropic.APIError, RuntimeError) as e:
+    except (requests.RequestException, ValueError, RuntimeError) as e:
         print(f"  WARNING: couldn't write the round summary ({e}); keeping the saved one")
         return saved
     summary = {"text": text, "model": model, "input_hash": digest,

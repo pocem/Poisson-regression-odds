@@ -53,9 +53,9 @@ jobs:
           exit $code
 
       - name: Build website
-        # Writes Claude's round summary when the data changed (skipped without the secret).
+        # Writes the AI round summary when the data changed (skipped without the secret).
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python src/site/build_site.py
 
       - name: Commit updated data

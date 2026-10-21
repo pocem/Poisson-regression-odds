@@ -642,12 +642,12 @@ footer p { margin: 6px 0; }
   }
   renderValue();
 
-  // ---------- Claude's round summary ----------
+  // ---------- AI round summary ----------
   (function renderSummary() {
     const s = ALL.round_summary;
     if (!s || !s.text) return;
     $("summaryText").innerHTML = s.text.split(/\n\s*\n/).map((p) => `<p>${esc(p.trim())}</p>`).join("");
-    $("summarySub").textContent = `Written by Claude from the data on this page, ${new Date(s.generated_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. Not betting advice.`;
+    $("summarySub").textContent = `Written by AI (Google Gemini) from the data on this page, ${new Date(s.generated_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. Not betting advice.`;
     $("summary").hidden = false;
   })();
 

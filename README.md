@@ -76,11 +76,12 @@ updated data, and publishes a static page to GitHub Pages with a league switcher
 - the current Elo table.
 
 Above the leagues, the page lists every upcoming outcome with an expected value of 10% or more
-at Bet365's odds, and a short round summary written by Claude (`src/site/round_summary.py`) from
-the predictions, Bet365's odds and the latest results. The summary is saved to
-`data/summary/round_summary.json` and only rewritten when that data changes; it needs an
-`ANTHROPIC_API_KEY` repository secret (Settings → Secrets and variables → Actions). Without
-it, the site builds as usual and keeps the last saved summary.
+at Bet365's odds, and a short round summary written by Google's Gemini 3.8 Flash on the Gemini
+API's free tier (`src/site/round_summary.py`) from the predictions, Bet365's odds and the latest
+results. The summary is saved to `data/summary/round_summary.json` and only rewritten when that
+data changes; it needs a `GEMINI_API_KEY` repository secret (an API key from
+aistudio.google.com; Settings → Secrets and variables → Actions). Without it, the site builds
+as usual and keeps the last saved summary.
 
 A run only logs new predictions when the inputs changed (`--skip-if-unchanged`), and a
 "data not ready" stop is reported on the page rather than failing the workflow.
