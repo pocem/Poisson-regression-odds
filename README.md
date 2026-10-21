@@ -76,9 +76,10 @@ updated data, and publishes a static page to GitHub Pages with a league switcher
 - the current Elo table.
 
 Above the leagues, the page lists every upcoming outcome with an expected value of 10% or more
-at Bet365's odds, and a short round summary written by Google's Gemini 3.8 Flash on the Gemini
-API's free tier (`src/site/round_summary.py`) from the predictions, Bet365's odds and the latest
-results. The summary is saved to `data/summary/round_summary.json` and only rewritten when that
+at Bet365's odds, and a short round summary written by Google's Gemini on the Gemini API's free
+tier (`src/site/round_summary.py`) from the predictions, Bet365's odds and the latest results.
+It uses Gemini 3.8 Flash, retrying and then falling back to other free models when that one is
+overloaded. The summary is saved to `data/summary/round_summary.json` and only rewritten when that
 data changes; it needs a `GEMINI_API_KEY` repository secret (an API key from
 aistudio.google.com; Settings → Secrets and variables → Actions). Without it, the site builds
 as usual and keeps the last saved summary.

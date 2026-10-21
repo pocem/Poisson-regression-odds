@@ -17,14 +17,19 @@ Called by build_site.py; to (re)generate it on its own after a site build:
 import hashlib
 import json
 import os
+import time
 from datetime import datetime, timezone
 
 import requests
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SUMMARY_JSON = os.path.join(ROOT, "data", "summary", "round_summary.json")
-MODEL = "gemini-3.8-flash"  # on the Gemini API's free tier
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
+# Free-tier models, tried in order: the free tier is the first to be turned away
+# when a model is overloaded, so a busy model falls through to the next one.
+MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+RETRY_WAITS = [10, 30]  # seconds before retrying an overloaded / rate-limited model
+RETRYABLE = {429, 500, 503}
 
 SYSTEM = """You write the weekly round summary for a football prediction website. A bivariate \
 Poisson regression model predicts home win / draw / away win chances for Premier League, \
@@ -105,9 +110,29 @@ def load_saved():
     return None
 
 
+class Unavailable(RuntimeError):
+    """The model is overloaded, rate-limited or missing -- another model may work."""
+
+
 def write_summary(payload):
+    """(text, model) from the first model in MODELS that answers."""
+    errors = []
+    for model in MODELS:
+        for wait in RETRY_WAITS + [None]:
+            try:
+                return _generate(model, payload)
+            except Unavailable as e:
+                errors.append(f"{model}: {e}")
+                if wait is None or "HTTP 404" in str(e):
+                    break
+                print(f"  {model} unavailable ({str(e)[:60]}), retrying in {wait}s")
+                time.sleep(wait)
+    raise RuntimeError("no model available -- " + " | ".join(e[:160] for e in errors))
+
+
+def _generate(model, payload):
     resp = requests.post(
-        API_URL,
+        API_URL.format(model=model),
         headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"], "Content-Type": "application/json"},
         json={
             "systemInstruction": {"parts": [{"text": SYSTEM}]},
@@ -119,6 +144,8 @@ def write_summary(payload):
         },
         timeout=120,
     )
+    if resp.status_code in RETRYABLE or resp.status_code == 404:
+        raise Unavailable(f"HTTP {resp.status_code}: {resp.text[:300]}")
     if resp.status_code != 200:
         raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:300]}")
     body = resp.json()
@@ -135,7 +162,7 @@ def write_summary(payload):
     text = "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
     if not text:
         raise RuntimeError("empty response")
-    return text, body.get("modelVersion", MODEL)
+    return text, body.get("modelVersion", model)
 
 
 def round_summary(data):
