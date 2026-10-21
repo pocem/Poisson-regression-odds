@@ -9,9 +9,9 @@ section per league (src/leagues.py) and a league switcher:
                  (processed/live_season.csv)
   - Elo table    current self-computed ratings
   - status       outcome of the last pipeline run (predictions/last_run.json)
-  - differences  across all leagues, the TOP_DIFFERENCES upcoming outcomes where the
-                 model rates the outcome most above Bet365 (difference in chance,
-                 percentage points), with the expected value at Bet365's odds
+  - value        across all leagues, every upcoming outcome whose expected value at
+                 Bet365's odds is at least MIN_EV, by the model's probability
+  - summary      Claude's write-up of the round (src/site/round_summary.py)
 
 Fills the template next to this script (page_template.html -- the page's
 source: layout, styling, charts) with the data, and writes the finished,
@@ -41,6 +41,7 @@ from leagues import LEAGUES  # noqa: E402
 from sources import HEADERS, fetch_fixtures, now_uk  # noqa: E402
 from predict_round import WINDOW, next_season  # noqa: E402
 from backtest import season_backtest  # noqa: E402
+from round_summary import round_summary  # noqa: E402
 from compute_elo import completed_seasons, load_history_matches, seed_ratings, compute_elo  # noqa: E402
 from process_season_data import load_data  # noqa: E402
 
@@ -50,7 +51,7 @@ FAVICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.svg"
 OUT_DIR = os.path.join(ROOT, "generated_site")
 UPCOMING_ODDS_URL = "https://www.football-data.co.uk/fixtures.csv"
 OUTCOMES = ["H", "D", "A"]
-TOP_DIFFERENCES = 10
+MIN_EV = 0.10  # value table: outcomes with an expected value of at least 10% at Bet365's odds
 # Our odds are priced so that the outcomes' chances add up to 1 + MARGIN; every
 # chance is scaled by the same factor, so favourites and outsiders keep their ratio.
 MARGIN = 0.06
@@ -259,13 +260,12 @@ def league_data(league, all_odds):
     }
 
 
-def top_differences(leagues, now, n=TOP_DIFFERENCES):
-    """Every outcome (home win / draw / away win) of every upcoming match that
-    has Bet365 odds, ranked by how much higher the model rates it than Bet365:
-        difference = model chance - Bet365 chance (both as shown on the site)
-    Each row also carries the expected value at Bet365's odds,
-        EV = model probability x Bet365 odds - 1
-    (ranking by EV would favour long-odds outsiders)."""
+def value_outcomes(leagues, now, min_ev=MIN_EV):
+    """Every outcome (home win / draw / away win) of every upcoming match with
+    Bet365 odds whose expected value at those odds is at least min_ev,
+        EV = model probability x Bet365 odds - 1,
+    highest EV first. Each row also carries the difference in chance
+    (model chance - Bet365 chance, both as shown on the site)."""
     rows = []
     for lg in leagues:
         nx = lg["next"]
@@ -289,8 +289,7 @@ def top_differences(leagues, now, n=TOP_DIFFERENCES):
                     "odds_b365": g["b365"][i], "odds_model": g["odds"][i],
                     "ev": round(g["p_model"][i] * g["b365"][i] - 1, 4),
                 })
-    rows = [r for r in rows if r["diff"] > 0]  # only outcomes the model rates above Bet365
-    return sorted(rows, key=lambda r: -r["diff"])[:n]
+    return sorted((r for r in rows if r["ev"] >= min_ev), key=lambda r: -r["ev"])
 
 
 def main():
@@ -305,8 +304,9 @@ def main():
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "generated_uk": f"{now_uk():%Y-%m-%d %H:%M}",
         "leagues": leagues,
-        "differences": top_differences(leagues, now_uk()),
+        "differences": value_outcomes(leagues, now_uk()),
     }
+    data["round_summary"] = round_summary(data)
     html = open(TEMPLATE, encoding="utf-8").read()
     payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
     os.makedirs(OUT_DIR, exist_ok=True)

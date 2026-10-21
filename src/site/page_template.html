@@ -140,6 +140,9 @@ section { margin-top: 36px; }
 .pc-diff { font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .key.model { background: var(--s1); } .key.book { background: var(--s2); }
+.summary-card { padding: 16px 18px; font-size: 15px; line-height: 1.6; max-width: 760px; }
+.summary-card p { margin: 0 0 10px; }
+.summary-card p:last-child { margin-bottom: 0; }
 .value-section table.data td.outcome-cell { font-weight: 600; color: var(--ink); }
 .value-section a.league-link { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--axis); }
 .value-section a.league-link:hover { color: var(--ink); }
@@ -253,9 +256,16 @@ footer p { margin: 6px 0; }
     </div>
     <div class="meta"><span id="updated"></span> &nbsp;<button class="theme-toggle" id="themeBtn" type="button">Theme</button></div>
   </header>
+  <section id="summary" class="summary-section" hidden>
+    <div class="section-head">
+      <div><h2>This round</h2><p id="summarySub"></p></div>
+    </div>
+    <div class="card summary-card" id="summaryText"></div>
+  </section>
+
   <section id="value" class="value-section">
     <div class="section-head">
-      <div><h2>Biggest differences vs Bet365 · all leagues</h2><p id="valueSub"></p></div>
+      <div><h2>Expected value of 10% or more at Bet365's odds · all leagues</h2><p id="valueSub"></p></div>
     </div>
     <div class="card table-wrap">
       <table class="data">
@@ -267,7 +277,7 @@ footer p { margin: 6px 0; }
         <tbody id="valueRows"></tbody>
       </table>
     </div>
-    <p class="footnote">Ranked by <b>difference</b>: the model's chance minus Bet365's, in percentage points (pts). <b>Bet365 chance</b> is 1 ÷ Bet365's odds. <b>Expected value</b> is the average return per unit staked at Bet365's odds <i>if the model is right</i>; a positive difference can still have negative expected value. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
+    <p class="footnote">Every upcoming outcome whose <b>expected value</b> is at least 10%, highest first. Expected value is the average return per unit staked at Bet365's odds <i>if the model is right</i>. <b>Difference</b> is the model's chance minus Bet365's, in percentage points (pts); <b>Bet365 chance</b> is 1 ÷ Bet365's odds. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
   </section>
 
   <nav class="league-tabs" id="leagueTabs" role="tablist" aria-label="League"></nav>
@@ -608,10 +618,10 @@ footer p { margin: 6px 0; }
     const rows = ALL.differences || [];
     if (!rows.length) {
       $("valueSub").textContent = "";
-      $("valueRows").innerHTML = `<tr><td colspan="11" class="dim">Nothing to compare yet: Bet365 odds for the upcoming matches aren't posted (football-data.co.uk adds them on Tuesdays for midweek rounds and Fridays for weekend rounds), or the model rates no outcome above Bet365.</td></tr>`;
+      $("valueRows").innerHTML = `<tr><td colspan="11" class="dim">Nothing to compare yet: Bet365 odds for the upcoming matches aren't posted (football-data.co.uk adds them on Tuesdays for midweek rounds and Fridays for weekend rounds), or no outcome reaches an expected value of 10%.</td></tr>`;
       return;
     }
-    $("valueSub").textContent = `The ${rows.length} upcoming outcomes the model rates most above Bet365, biggest difference first.`;
+    $("valueSub").textContent = `${rows.length} upcoming outcome${rows.length === 1 ? "" : "s"} with an expected value of 10% or more, highest first.`;
     $("valueRows").innerHTML = rows.map((r, i) => {
       const when = r.kickoff_tbc ? `Weekend of ${fmtDate(r.kickoff)}` : fmtKick(r.kickoff);
       const ev = r.ev * 100;
@@ -631,6 +641,15 @@ footer p { margin: 6px 0; }
     }).join("");
   }
   renderValue();
+
+  // ---------- Claude's round summary ----------
+  (function renderSummary() {
+    const s = ALL.round_summary;
+    if (!s || !s.text) return;
+    $("summaryText").innerHTML = s.text.split(/\n\s*\n/).map((p) => `<p>${esc(p.trim())}</p>`).join("");
+    $("summarySub").textContent = `Written by Claude from the data on this page, ${new Date(s.generated_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. Not betting advice.`;
+    $("summary").hidden = false;
+  })();
 
   selectFromHash();
 })();
