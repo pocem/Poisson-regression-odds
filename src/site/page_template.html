@@ -123,25 +123,21 @@ section { margin-top: 36px; }
 .teams .t { font-weight: 600; font-size: 16px; line-height: 1.25; }
 .teams .t.away { text-align: right; }
 .teams .vs { color: var(--muted); font-size: 13px; }
-.probbar { display: flex; height: 10px; gap: 2px; border-radius: 5px; overflow: hidden; }
-.probbar span { display: block; height: 100%; }
-.probbar .h { background: var(--s1); }
-.probbar .d { background: var(--draw); }
-.probbar .a { background: var(--s2); }
-.outcomes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
-.outcome { font-size: 13px; color: var(--ink-2); }
-.outcome:nth-child(2) { text-align: center; }
-.outcome:nth-child(3) { text-align: right; }
-.outcome .pct { display: block; font-size: 20px; font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
-.outcome .odd { font-variant-numeric: tabular-nums; }
-.key { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
-.key.h { background: var(--s1); } .key.d { background: var(--draw); } .key.a { background: var(--s2); }
-.book { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--grid); font-size: 13px; color: var(--ink-2); }
-.book table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.book td { padding: 2px 0; }
-.book td:not(:first-child) { text-align: right; width: 21%; }
-.book td:first-child { white-space: nowrap; }
-.book .sep td { border-top: 1px solid var(--grid); padding-top: 4px; }
+/* Win-probability bars: one group per outcome, model bar above Bet365's, all on a 0-100% scale. */
+.pchart { display: grid; gap: 10px; }
+.pc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; margin-bottom: 3px; }
+.pc-head .lbl { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-head .diff { font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pc-bar { display: grid; grid-template-columns: 1fr 78px; align-items: center; gap: 8px; height: 14px; }
+.pc-track { position: relative; height: 100%; border-left: 1px solid var(--axis); }
+.pc-track span { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 0 4px 4px 0; min-width: 2px; }
+.pc-bar.model .pc-track span { background: var(--s1); top: 1px; bottom: 1px; }
+.pc-bar.book .pc-track span { background: var(--s2); }
+.pc-bar.book { margin-top: 2px; }  /* 2px surface gap between the model and Bet365 bars */
+.pc-bar .val { font-size: 12.5px; color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pc-bar.model .val b { color: var(--ink); font-weight: 650; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.key.model { background: var(--s1); } .key.book { background: var(--s2); }
 .value-section table.data td.outcome-cell { font-weight: 600; color: var(--ink); }
 .value-section a.league-link { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--axis); }
 .value-section a.league-link:hover { color: var(--ink); }
@@ -278,9 +274,7 @@ footer p { margin: 6px 0; }
   <section id="next">
     <div class="section-head">
       <div><h2 id="nextTitle">Next round</h2><p id="nextSub"></p></div>
-      <div class="legend" aria-hidden="true">
-        <span><span class="key h"></span>Home win</span><span><span class="key d"></span>Draw</span><span><span class="key a"></span>Away win</span>
-      </div>
+      <div class="legend" id="nextLegend" aria-hidden="true"></div>
     </div>
     <div class="games" id="games"></div>
   </section>
@@ -427,28 +421,30 @@ footer p { margin: 6px 0; }
     $("nextTitle").textContent = `Round ${nx.round}`;
     const anyBook = nx.games.some((g) => g.b365);
     $("nextSub").textContent = `Predicted ${new Date(nx.predicted_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. ` +
-      (anyBook ? "Bet365 chance = 1 ÷ its odds. Model − Bet365 = the model's chance minus Bet365's, in percentage points (pts): e.g. model 47%, Bet365 35% → +12 pts."
+      "Each bar is an outcome's chance (0–100%), labelled with chance · odds. " +
+      (anyBook ? "Bet365's chance is 1 ÷ its odds. The figure above each pair is the model's chance minus Bet365's, in percentage points (pts): e.g. model 47%, Bet365 35% → +12 pts."
                : "Bet365 odds appear here once football-data.co.uk posts them (Tuesdays for midweek rounds, Fridays for weekend rounds).");
+    $("nextLegend").innerHTML = `<span><span class="key model"></span>Model</span>` +
+      (anyBook ? `<span><span class="key book"></span>Bet365</span>` : "");
     $("games").innerHTML = nx.games.map((g) => {
       const extra = g.round !== nx.round ? ` · rearranged from round ${g.round}` : "";
-      const book = g.b365 ? `<div class="book"><table>
-          <tr><td></td><td>Home</td><td>Draw</td><td>Away</td></tr>
-          <tr><td>Bet365 odds</td>${g.b365.map((o) => `<td>${odd(o)}</td>`).join("")}</tr>
-          <tr><td>Bet365 chance</td>${g.b365_prob.map((q) => `<td>${pct(q)}</td>`).join("")}</tr>
-          <tr class="sep"><td title="Model's chance minus Bet365's, in percentage points">Model − Bet365</td>${g.edge.map((e) => `<td class="${e > 0 ? "edge-pos" : "edge-neg"}">${e > 0 ? "▲ +" : ""}${(e * 100).toFixed(1)} pts</td>`).join("")}</tr>
-        </table></div>` : "";
+      const labels = [g.home, "Draw", g.away];
+      const bar = (cls, who, q, o) => `<div class="pc-bar ${cls}" title="${esc(who)}: ${pct1(q)} chance, odds ${odd(o)}">
+            <div class="pc-track"><span style="width:${Math.min(q, 1) * 100}%"></span></div>
+            <span class="val">${cls === "model" ? `<b>${pct(q)}</b>` : pct(q)} · ${odd(o)}</span></div>`;
+      const chart = `<div class="pchart" role="group" aria-label="Win probabilities">${[0, 1, 2].map((i) => {
+        const e = g.b365 ? g.edge[i] : null;
+        return `<div class="pc-row">
+          <div class="pc-head"><span class="lbl">${esc(labels[i])}</span>${e == null ? "" :
+            `<span class="diff ${e > 0 ? "edge-pos" : "edge-neg"}" title="Model's chance minus Bet365's, in percentage points">${e > 0 ? "▲ +" : ""}${(e * 100).toFixed(1)} pts</span>`}</div>
+          ${bar("model", "Model", g.p[i], g.odds[i])}
+          ${g.b365 ? bar("book", "Bet365", g.b365_prob[i], g.b365[i]) : ""}
+        </div>`;
+      }).join("")}</div>`;
       return `<article class="card game">
         <div class="when"><span>${esc(g.kickoff_tbc ? `Weekend of ${fmtDate(g.kickoff)} · kickoff TBC` : fmtKick(g.kickoff))}${esc(extra)}</span><span>Elo ${g.elo[0] ?? "–"} – ${g.elo[1] ?? "–"}</span></div>
         <div class="teams"><span class="t">${esc(g.home)}</span><span class="vs">vs</span><span class="t away">${esc(g.away)}</span></div>
-        <div class="probbar" role="img" aria-label="Home ${pct(g.p[0])}, draw ${pct(g.p[1])}, away ${pct(g.p[2])}">
-          <span class="h" style="width:${g.p_model[0] * 100}%"></span><span class="d" style="width:${g.p_model[1] * 100}%"></span><span class="a" style="width:${g.p_model[2] * 100}%"></span>
-        </div>
-        <div class="outcomes">
-          <div class="outcome"><span class="pct">${pct(g.p[0])}</span><span class="key h"></span>Home <span class="odd">${odd(g.odds[0])}</span></div>
-          <div class="outcome"><span class="pct">${pct(g.p[1])}</span><span class="key d"></span>Draw <span class="odd">${odd(g.odds[1])}</span></div>
-          <div class="outcome"><span class="pct">${pct(g.p[2])}</span><span class="key a"></span>Away <span class="odd">${odd(g.odds[2])}</span></div>
-        </div>
-        ${book}
+        ${chart}
         <details class="more"><summary>Expected goals ${g.xg[0]} – ${g.xg[1]} · likeliest scores</summary>
           <div class="scores">${g.scores.map((s) => `<span class="score-chip"><b>${esc(s.score)}</b> ${pct1(s.p)} · ${odd(s.odds)}</span>`).join("")}</div>
         </details>
