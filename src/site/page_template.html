@@ -33,6 +33,8 @@
   --warn-ink: #6b4a00;
   --ok-bg: #e5f4e5;
   --ok-ink: #0b5a0b;
+  --bad-bg: #fbe6e6;
+  --bad-ink: #8f2222;
   --shadow: 0 1px 2px rgba(11, 11, 11, 0.04);
 }
 @media (prefers-color-scheme: dark) {
@@ -56,6 +58,8 @@
     --warn-ink: #f5d68c;
     --ok-bg: #12301a;
     --ok-ink: #9be09b;
+    --bad-bg: #3a1717;
+    --bad-ink: #f2a8a8;
     --shadow: none;
   }
 }
@@ -79,6 +83,8 @@
   --warn-ink: #f5d68c;
   --ok-bg: #12301a;
   --ok-ink: #9be09b;
+    --bad-bg: #3a1717;
+    --bad-ink: #f2a8a8;
   --shadow: none;
 }
 
@@ -239,6 +245,66 @@ footer p { margin: 6px 0; }
   font: inherit; font-size: 13px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 4px 10px; cursor: pointer;
 }
+/* Teams and prices */
+.hover-tip { position: fixed; z-index: 10; }
+.tooltip .tt-key { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.lg-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.lg-ring { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--ink); margin-right: 6px; vertical-align: -1px; }
+.lg-tick { display: inline-block; width: 14px; height: 2px; background: var(--ink); border-radius: 1px; vertical-align: 4px; margin-right: 6px; }
+.chart-note { color: var(--muted); font-size: 13px; padding: 12px 0; }
+.tr-head, .tr-row, .tr-axis { display: grid; grid-template-columns: 130px 1fr 46px; gap: 10px; align-items: center; }
+.tr-head { font-size: 12px; color: var(--muted); margin: 12px 0 2px; }
+.tr-head span:last-child, .tr-gap { text-align: right; }
+.tr-row { width: 100%; font: inherit; color: inherit; background: none; border: 0; padding: 3px 0; cursor: pointer; text-align: left; border-radius: 6px; }
+.tr-row:hover, .tr-row.sel { background: var(--surface-2); }
+.tr-row:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+.tr-name { font-size: 13px; font-weight: 600; padding-left: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-gap { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; padding-right: 6px; }
+.tr-track, .ph-track { position: relative; height: 18px; }
+.tr-track { background: linear-gradient(to right, var(--grid) 1px, transparent 1px) 0 0 / 25% 100%; border-right: 1px solid var(--grid); }
+.tr-span, .ph-span { position: absolute; top: 8px; height: 2px; background: var(--axis); }
+.tr-dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); }
+.tr-row:hover .tr-dot, .tr-row.sel .tr-dot { box-shadow: 0 0 0 2px var(--surface-2); }
+.tr-dot.model { background: var(--s1); }
+.tr-dot.book { background: var(--s2); }
+.tr-row .tr-dot.won { background: transparent; border: 2px solid var(--ink); width: 12px; height: 12px; margin: -6px 0 0 -6px; box-shadow: none; }
+.tr-ticks, .ph-ticks { position: relative; height: 16px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tr-ticks i, .ph-ticks i { position: absolute; transform: translateX(-50%); font-style: normal; white-space: nowrap; }
+.ph-top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.ph-top select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; min-height: 34px; }
+.ph-top select:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+.ph-sum { font-size: 13px; color: var(--ink-2); margin: 8px 0 4px; }
+.ph-row, .ph-axis { display: grid; grid-template-columns: 150px 1fr 66px; gap: 10px; align-items: center; }
+.ph-row { padding: 3px 0; border-bottom: 1px solid var(--grid); }
+.ph-lbl { font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-lbl b { color: var(--ink); font-weight: 600; }
+.ph-track .gl { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); }
+.res { justify-self: end; font-size: 12px; font-weight: 650; padding: 1px 7px; border-radius: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.res.W { background: var(--ok-bg); color: var(--ok-ink); }
+.res.L { background: var(--bad-bg); color: var(--bad-ink); }
+.res.D { background: var(--surface-2); color: var(--ink-2); }
+.ph-dir { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+.bd { display: flex; gap: 8px; margin-top: 14px; }
+.bd-group { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.bd-plot { display: flex; justify-content: center; align-items: flex-end; gap: 2px; height: 150px; width: 100%; border-bottom: 1px solid var(--axis); }
+.bd-col { position: relative; width: 34px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.bd-col .v { position: absolute; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bd-col .bar { width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; }
+.bd-col.model .bar { background: var(--s1); }
+.bd-col.book .bar { background: var(--s2); }
+.bd-col.few .bar { opacity: 0.4; }
+.bd-col .exp { position: absolute; left: -3px; right: -3px; height: 2px; background: var(--ink); border-radius: 1px; }
+.bd-lbl { margin-top: 5px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.bd-n { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 520px) {
+  .tr-head, .tr-row, .tr-axis { grid-template-columns: 92px 1fr 36px; gap: 6px; }
+  .ph-row, .ph-axis { grid-template-columns: 100px 1fr 58px; gap: 6px; }
+  .bd { gap: 4px; }
+  .bd-col { width: 25px; }
+  .bd-col .v { font-size: 10px; }
+  .ph-ticks i.minor, .ph-track .gl.minor { display: none; }
+  .bd-lbl { font-size: 12px; }
+}
 @media (max-width: 520px) {
   h1 { font-size: 21px; }
   .games { grid-template-columns: 1fr; }
@@ -312,6 +378,57 @@ footer p { margin: 6px 0; }
         <span><i style="background:var(--s2)"></i>Bet365</span>
       </div>
       <div class="chart" id="chart"><div class="tooltip" id="tooltip"></div></div>
+    </div>
+  </section>
+
+  <section id="teams">
+    <div class="section-head">
+      <div><h2>Teams and prices</h2><p id="teamsSub"></p></div>
+    </div>
+    <div class="card chart-card">
+      <div class="chart-top">
+        <div>
+          <strong style="font-size:14px">Team ratings: model vs Bet365 vs results</strong>
+          <div class="meta">Each team's average chance of winning its matches, and how often it actually won. Click a team to see its price history below.</div>
+        </div>
+        <div class="seg" id="ratingSort" role="group" aria-label="Sort teams">
+          <button type="button" data-sort="gap" aria-pressed="true">Biggest gap</button>
+          <button type="button" data-sort="book" aria-pressed="false">Strongest</button>
+        </div>
+      </div>
+      <div class="legend" style="margin-top:10px">
+        <span><span class="lg-dot" style="background:var(--s1)"></span>Model</span>
+        <span><span class="lg-dot" style="background:var(--s2)"></span>Bet365</span>
+        <span><span class="lg-ring"></span>Actually won</span>
+      </div>
+      <div id="ratingChart"></div>
+    </div>
+    <div class="card chart-card">
+      <div class="ph-top">
+        <div>
+          <strong style="font-size:14px">Price history</strong>
+          <div class="meta">The team's win odds in every match this season, from the model and Bet365, and the result.</div>
+        </div>
+        <select id="teamPick" aria-label="Team"></select>
+      </div>
+      <div class="legend" style="margin-top:10px">
+        <span><span class="lg-dot" style="background:var(--s1)"></span>Model odds</span>
+        <span><span class="lg-dot" style="background:var(--s2)"></span>Bet365 odds</span>
+      </div>
+      <div id="priceChart"></div>
+    </div>
+    <div class="card chart-card">
+      <div>
+        <strong style="font-size:14px">How often teams win at each price</strong>
+        <div class="meta">Every team's win odds this season, grouped by price. Bars: how often teams priced in that range actually won. Line: the average chance the forecaster gave them. A bar reaching its line means the prices in that range were right.</div>
+      </div>
+      <div class="legend" style="margin-top:10px">
+        <span><span class="lg-dot" style="background:var(--s1);border-radius:2px"></span>Priced by the model</span>
+        <span><span class="lg-dot" style="background:var(--s2);border-radius:2px"></span>Priced by Bet365</span>
+        <span><span class="lg-tick"></span>Average chance given</span>
+      </div>
+      <div id="bandChart"></div>
+      <p class="note">Under each range: how many teams the model · Bet365 priced there. Faded bars are based on fewer than 5 teams.</p>
     </div>
   </section>
 
@@ -403,6 +520,7 @@ footer p { margin: 6px 0; }
     drawChart();
     renderFilters();
     renderMatches();
+    renderTeams();
     renderElo();
   }
 
@@ -493,9 +611,10 @@ footer p { margin: 6px 0; }
     { key: "model", name: "Model", color: "--s1" },
     { key: "b365", name: "Bet365", color: "--s2" },
   ];
-  document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
+  const modeButtons = document.querySelectorAll('.seg[aria-label="Chart mode"] button');
+  modeButtons.forEach((b) => b.addEventListener("click", () => {
     mode = b.dataset.mode;
-    document.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    modeButtons.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     drawChart();
   }));
 
@@ -600,6 +719,184 @@ footer p { margin: 6px 0; }
   }
   $("roundFilter").addEventListener("change", renderMatches);
   $("teamFilter").addEventListener("change", renderMatches);
+
+  // ---------- teams and prices ----------
+  // Shared hover tooltip for every element with data-tip='{"t": title, "r": [[label, value, colour var], ...]}'.
+  const hoverTip = document.createElement("div");
+  hoverTip.className = "tooltip hover-tip";
+  document.body.appendChild(hoverTip);
+  function showTip(e) {
+    const el = e.target.closest && e.target.closest("[data-tip]");
+    if (!el) { hoverTip.style.display = "none"; return; }
+    const t = JSON.parse(el.dataset.tip);
+    hoverTip.innerHTML = `<div class="tt-title">${esc(t.t)}</div>` + t.r.map(([k, v, c]) =>
+      `<div class="tt-row"><span>${c ? `<i class="tt-key" style="background:var(${c})"></i>` : ""}${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+    hoverTip.style.display = "block";
+    const w = hoverTip.offsetWidth, h = hoverTip.offsetHeight;
+    let left = e.clientX + 14, top = e.clientY + 14;
+    if (left + w > innerWidth - 8) left = e.clientX - w - 14;
+    if (top + h > innerHeight - 8) top = e.clientY - h - 14;
+    hoverTip.style.left = Math.max(8, left) + "px";
+    hoverTip.style.top = Math.max(8, top) + "px";
+  }
+  document.addEventListener("pointermove", showTip);
+  document.addEventListener("pointerdown", showTip);
+  window.addEventListener("scroll", () => { hoverTip.style.display = "none"; }, { passive: true });
+  const tipAttr = (title, rows) => esc(JSON.stringify({ t: title, r: rows }));
+
+  // Bet365's odds -> chances scaled to 100%, so they compare with results like the model's do.
+  const bookChances = (o) => {
+    if (!o || o.some((x) => x == null)) return null;
+    const inv = o.map((x) => 1 / x), s = inv[0] + inv[1] + inv[2];
+    return inv.map((x) => x / s);
+  };
+  // Every played match from each team's side: its win chance, win odds and result.
+  function teamGames() {
+    const out = [];
+    DATA.matches.forEach((m) => {
+      const q = bookChances(m.b365);
+      [[m.home, 0, m.away, true], [m.away, 2, m.home, false]].forEach(([team, i, opp, home]) => {
+        out.push({
+          team, opp, home, round: m.round, kickoff: m.kickoff,
+          gf: m.score[home ? 0 : 1], ga: m.score[home ? 1 : 0],
+          res: m.result === "D" ? "D" : m.result === OUT[i] ? "W" : "L",
+          pModel: m.p[i], pBook: q ? q[i] : null, oModel: m.odds[i], oBook: q ? m.b365[i] : null,
+        });
+      });
+    });
+    return out;
+  }
+
+  let ratingSort = "gap", phTeam = null, phLeague = null;
+  document.querySelectorAll("#ratingSort button").forEach((b) => b.addEventListener("click", () => {
+    ratingSort = b.dataset.sort;
+    document.querySelectorAll("#ratingSort button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    renderTeams();
+  }));
+  $("ratingChart").addEventListener("click", (e) => {
+    const row = e.target.closest("[data-team]");
+    if (row) { phTeam = row.dataset.team; renderTeams(); }
+  });
+  $("teamPick").addEventListener("change", () => { phTeam = $("teamPick").value; renderTeams(); });
+
+  const mean = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+  const median = (arr) => {
+    if (!arr.length) return null;
+    const s = [...arr].sort((a, b) => a - b), k = s.length >> 1;
+    return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2;
+  };
+
+  function renderTeams() {
+    const games = teamGames();
+    if (!games.length) {
+      $("teamsSub").textContent = "";
+      ["ratingChart", "priceChart", "bandChart"].forEach((id) => { $(id).innerHTML = `<p class="chart-note">Appears once matches have been played.</p>`; });
+      $("teamPick").innerHTML = "";
+      return;
+    }
+    $("teamsSub").textContent = `${DATA.matches.length} played matches this season. With only a few matches per team, single results move these numbers a lot.`;
+    const ratings = [...new Set(games.map((g) => g.team))].map((team) => {
+      const gs = games.filter((g) => g.team === team), wb = gs.filter((g) => g.pBook != null);
+      const wins = gs.filter((g) => g.res === "W").length;
+      return { team, n: gs.length, wins, won: wins / gs.length, model: mean(gs.map((g) => g.pModel)), book: mean(wb.map((g) => g.pBook)) };
+    });
+    ratings.sort(ratingSort === "gap"
+      ? (a, b) => (a.model - (a.book ?? a.model)) - (b.model - (b.book ?? b.model))
+      : (a, b) => (b.book ?? b.model) - (a.book ?? a.model));
+    if (phLeague !== DATA.id || !ratings.some((r) => r.team === phTeam)) { phTeam = ratings[0].team; phLeague = DATA.id; }
+    renderRatings(ratings);
+    renderPriceHistory(games, ratings);
+    renderBands(games);
+  }
+
+  function renderRatings(ratings) {
+    const x = (p) => `${(p * 100).toFixed(2)}%`;
+    $("ratingChart").innerHTML = `<div class="tr-head"><span>Team</span><span>Win chance (0–100%)</span><span title="Model's average chance minus Bet365's, in percentage points">Gap</span></div>` +
+      ratings.map((r) => {
+        const gap = r.book == null ? null : r.model - r.book;
+        const lo = Math.min(r.model, r.book ?? r.model), hi = Math.max(r.model, r.book ?? r.model);
+        const tip = tipAttr(`${r.team} · ${r.n} matches`, [
+          ["Model's average win chance", pct(r.model), "--s1"],
+          ["Bet365's average win chance", r.book == null ? "–" : pct(r.book), "--s2"],
+          ["Actually won", `${pct(r.won)} (${r.wins} of ${r.n})`],
+        ]);
+        return `<button type="button" class="tr-row${r.team === phTeam ? " sel" : ""}" data-team="${esc(r.team)}" data-tip="${tip}" aria-label="${esc(r.team)}: model ${pct(r.model)}, Bet365 ${r.book == null ? "none" : pct(r.book)}, won ${pct(r.won)}">
+          <span class="tr-name">${esc(r.team)}</span>
+          <span class="tr-track">
+            <span class="tr-span" style="left:${x(lo)};width:${x(hi - lo)}"></span>
+            <span class="tr-dot won" style="left:${x(r.won)}"></span>
+            ${r.book == null ? "" : `<span class="tr-dot book" style="left:${x(r.book)}"></span>`}
+            <span class="tr-dot model" style="left:${x(r.model)}"></span>
+          </span>
+          <span class="tr-gap">${gap == null ? "" : `${gap >= 0.005 ? "+" : gap <= -0.005 ? "−" : ""}${Math.abs(gap * 100).toFixed(0)}`}</span>
+        </button>`;
+      }).join("") +
+      `<div class="tr-axis"><span></span><span class="tr-ticks">${[0, 25, 50, 75, 100].map((t) => `<i style="left:${t}%">${t}%</i>`).join("")}</span><span></span></div>`;
+  }
+
+  // Odds on a log scale: equal steps for 1.5 -> 3 and 3 -> 6.
+  const ODDS_LO = 1.1, ODDS_HI = 20;
+  const xOdds = (o) => `${((Math.log(Math.min(Math.max(o, ODDS_LO), ODDS_HI)) - Math.log(ODDS_LO)) / (Math.log(ODDS_HI) - Math.log(ODDS_LO)) * 100).toFixed(2)}%`;
+  const ODDS_TICKS = [1.25, 1.5, 2, 3, 5, 10, 20];
+
+  function renderPriceHistory(games, ratings) {
+    $("teamPick").innerHTML = [...ratings].sort((a, b) => a.team.localeCompare(b.team))
+      .map((r) => `<option value="${esc(r.team)}"${r.team === phTeam ? " selected" : ""}>${esc(r.team)}</option>`).join("");
+    const gs = games.filter((g) => g.team === phTeam).sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+    const w = gs.filter((g) => g.res === "W").length, d = gs.filter((g) => g.res === "D").length;
+    const mm = median(gs.map((g) => g.oModel)), mb = median(gs.filter((g) => g.oBook != null).map((g) => g.oBook));
+    const minor = (t) => (t < 2 ? " minor" : "");  // hidden on narrow screens, where the labels would collide
+    const grid = ODDS_TICKS.map((t) => `<span class="gl${minor(t)}" style="left:${xOdds(t)}"></span>`).join("");
+    $("priceChart").innerHTML =
+      `<p class="ph-sum"><b>${esc(phTeam)}</b>: won ${w}, drew ${d}, lost ${gs.length - w - d}. Typical win odds: model ${odd(mm)}, Bet365 ${odd(mb)}.</p>` +
+      `<div class="ph-axis"><span></span><span class="ph-dir"><span>← favourite</span><span>underdog →</span></span><span></span></div>` +
+      gs.map((g) => {
+        const lo = Math.min(g.oModel, g.oBook ?? g.oModel), hi = Math.max(g.oModel, g.oBook ?? g.oModel);
+        const tip = tipAttr(`Round ${g.round} · ${g.home ? "vs" : "at"} ${g.opp} · ${fmtDate(g.kickoff)}`, [
+          ["Model win odds", `${odd(g.oModel)} (${pct(g.pModel)})`, "--s1"],
+          ["Bet365 win odds", g.oBook == null ? "–" : `${odd(g.oBook)} (${pct(g.pBook)})`, "--s2"],
+          ["Result", `${{ W: "Won", D: "Drew", L: "Lost" }[g.res]} ${g.gf}–${g.ga}`],
+        ]);
+        return `<div class="ph-row" data-tip="${tip}">
+          <span class="ph-lbl">R${g.round} ${g.home ? "vs" : "at"} <b>${esc(g.opp)}</b></span>
+          <span class="ph-track">${grid}
+            <span class="ph-span" style="left:${xOdds(lo)};width:calc(${xOdds(hi)} - ${xOdds(lo)})"></span>
+            ${g.oBook == null ? "" : `<span class="tr-dot book" style="left:${xOdds(g.oBook)}"></span>`}
+            <span class="tr-dot model" style="left:${xOdds(g.oModel)}"></span>
+          </span>
+          <span class="res ${g.res}">${g.res} ${g.gf}–${g.ga}</span>
+        </div>`;
+      }).join("") +
+      `<div class="ph-axis"><span></span><span class="ph-ticks">${ODDS_TICKS.map((t) => `<i class="${minor(t).trim()}" style="left:${xOdds(t)}">${t}</i>`).join("")}</span><span></span></div>`;
+  }
+
+  const BANDS = [[0, 1.5, "under 1.5"], [1.5, 2, "1.5–2"], [2, 3, "2–3"], [3, 5, "3–5"], [5, Infinity, "5+"]];
+  const PLOT_PX = 128;  // px for 100%; the column is taller so the label above always fits
+
+  function renderBands(games) {
+    const stats = (oKey, pKey) => BANDS.map(([lo, hi]) => {
+      const g = games.filter((x) => x[oKey] != null && x[oKey] >= lo && x[oKey] < hi);
+      const wins = g.filter((x) => x.res === "W").length;
+      return { n: g.length, wins, rate: g.length ? wins / g.length : null, exp: mean(g.map((x) => x[pKey])) };
+    });
+    const model = stats("oModel", "pModel"), book = stats("oBook", "pBook");
+    const col = (cls, who, s, band) => {
+      if (!s.n) return `<div class="bd-col ${cls}"></div>`;
+      const tip = tipAttr(`Win odds ${band} · priced by ${who}`, [
+        ["Teams at this price", String(s.n)],
+        ["Actually won", `${pct(s.rate)} (${s.wins} of ${s.n})`, cls === "model" ? "--s1" : "--s2"],
+        [`${who === "the model" ? "Model" : "Bet365"}'s average chance`, pct(s.exp)],
+      ]);
+      return `<div class="bd-col ${cls}${s.n < 5 ? " few" : ""}" data-tip="${tip}">
+        <span class="v" style="bottom:${Math.max(s.rate, s.exp) * PLOT_PX + 4}px">${pct(s.rate)}</span><span class="bar" style="height:${s.rate * PLOT_PX}px"></span>
+        <span class="exp" style="bottom:${s.exp * PLOT_PX}px"></span></div>`;
+    };
+    $("bandChart").innerHTML = `<div class="bd">${BANDS.map(([, , label], i) => `<div class="bd-group">
+        <div class="bd-plot">${col("model", "the model", model[i], label)}${col("book", "Bet365", book[i], label)}</div>
+        <span class="bd-lbl">${label}</span>
+        <span class="bd-n" title="Teams priced in this range by the model · by Bet365">${model[i].n} · ${book[i].n}</span>
+      </div>`).join("")}</div>`;
+  }
 
   // ---------- Elo ----------
   function renderElo() {
