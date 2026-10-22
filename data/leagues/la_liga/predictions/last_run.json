@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-21T10:41:43+00:00",
-  "status": "unchanged",
-  "message": "Round 10 already predicted from the latest data.",
-  "round": 10
+  "run_timestamp": "2026-10-22T10:05:15+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "Understat has no xG yet for 1 played match(es): Levante v Ath Bilbao (2026-10-21)"
+  ]
 }
