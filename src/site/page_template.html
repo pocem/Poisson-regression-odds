@@ -249,6 +249,9 @@ footer p { margin: 6px 0; }
 /* Accounts and bet log */
 #account { white-space: nowrap; }
 .acct-name { color: var(--ink-2); font-weight: 600; }
+.signin-btn { font: inherit; font-size: 14px; font-weight: 650; color: var(--page); background: var(--ink); border: 1px solid var(--ink); border-radius: 8px; padding: 6px 16px; cursor: pointer; }
+.signin-btn:hover { opacity: 0.85; }
+.signin-btn:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
 .dlg { border: 1px solid var(--border); border-radius: 12px; padding: 0; background: var(--surface); color: var(--ink); width: min(440px, calc(100vw - 32px)); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }
 .dlg::backdrop { background: rgba(0, 0, 0, 0.45); }
 .dlg form { padding: 18px 18px 16px; display: grid; gap: 12px; }
@@ -630,7 +633,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     if (!sb) { $("account").innerHTML = ""; return; }
     $("account").innerHTML = user
       ? `<button type="button" class="theme-toggle" data-acct="mine">My bets</button> <span class="acct-name" title="${esc(user.email)}">${esc((user.user_metadata && user.user_metadata.display_name) || user.email)}</span> <button type="button" class="theme-toggle" data-acct="out">Sign out</button>`
-      : `<button type="button" class="theme-toggle" data-acct="in">Sign in</button>`;
+      : `<button type="button" class="signin-btn" data-acct="in">Sign in</button>`;
   }
   $("account").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-acct]");
