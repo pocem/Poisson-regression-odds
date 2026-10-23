@@ -12,6 +12,7 @@
 <title>Poisson Regression Football Odds</title>
 <meta name="description" content="Bivariate Poisson model odds for every Premier League match, from a model trained on the last three seasons and compared with Bet365.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <style>
 :root {
   color-scheme: light;
@@ -245,6 +246,49 @@ footer p { margin: 6px 0; }
   font: inherit; font-size: 13px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 4px 10px; cursor: pointer;
 }
+/* Accounts and bet log */
+#account { white-space: nowrap; }
+.acct-name { color: var(--ink-2); font-weight: 600; }
+.dlg { border: 1px solid var(--border); border-radius: 12px; padding: 0; background: var(--surface); color: var(--ink); width: min(440px, calc(100vw - 32px)); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }
+.dlg::backdrop { background: rgba(0, 0, 0, 0.45); }
+.dlg form { padding: 18px 18px 16px; display: grid; gap: 12px; }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dlg-head h2 { margin: 0; }
+.dlg-x { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.dlg-msg { margin: 0; color: var(--ink-2); font-size: 14px; }
+.dlg-err { margin: 0; color: var(--bad); font-size: 13.5px; }
+.dlg-msg:empty, .dlg-err:empty { display: none; }
+.fld { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); border: 0; padding: 0; margin: 0; min-width: 0; }
+.fld[hidden] { display: none; }
+.fld legend { padding: 0; margin-bottom: 4px; }
+.fld input:not([type=radio]), .fld textarea { font: inherit; font-size: 15px; color: var(--ink); background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; width: 100%; }
+.fld textarea { resize: vertical; }
+.fld input:focus-visible, .fld textarea:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+.fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choice { display: grid; gap: 6px; }
+.choice label { display: flex; gap: 8px; align-items: baseline; font-size: 14px; color: var(--ink); cursor: pointer; }
+.choice input[type=radio] { margin: 0; flex: none; accent-color: var(--s1); }
+.choice .dim { color: var(--muted); font-size: 12.5px; }
+.pw-rules { list-style: none; margin: -4px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 12.5px; color: var(--muted); }
+.pw-rules[hidden] { display: none; }
+.pw-rules li.ok { color: var(--good); }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
+.btn.primary { background: var(--s1); border-color: var(--s1); color: #fff; }
+.btn:disabled { opacity: 0.6; cursor: default; }
+.btn:focus-visible, .log-btn:focus-visible, .dlg-x:focus-visible, .del-btn:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+.log-btn { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--s1); background: none; border: 1px solid var(--border); border-radius: 7px; padding: 3px 9px; cursor: pointer; white-space: nowrap; }
+.log-btn:hover { background: var(--surface-2); }
+.game .card-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.tag { font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 5px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
+.tag.bet { background: var(--s1); color: #fff; }
+.del-btn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 17px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+.del-btn:hover { color: var(--bad); }
+td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); }
+@media (max-width: 520px) {
+  .fld-row { grid-template-columns: 1fr; }
+  .pw-rules { grid-template-columns: 1fr; }
+}
 /* Teams and prices */
 .hover-tip { position: fixed; z-index: 10; }
 .tooltip .tt-key { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
@@ -320,7 +364,7 @@ footer p { margin: 6px 0; }
       <h1>Poisson regression football odds</h1>
       <p class="sub" id="subtitle"></p>
     </div>
-    <div class="meta"><span id="updated"></span> &nbsp;<button class="theme-toggle" id="themeBtn" type="button">Theme</button></div>
+    <div class="meta"><span id="updated"></span> &nbsp;<span id="account"></span> <button class="theme-toggle" id="themeBtn" type="button">Theme</button></div>
   </header>
   <section id="summary" class="summary-section" hidden>
     <div class="section-head">
@@ -338,12 +382,29 @@ footer p { margin: 6px 0; }
         <thead><tr>
           <th class="num">#</th><th>League</th><th>Kickoff</th><th>Match</th><th>Outcome</th>
           <th class="num">Model<br>chance</th><th class="num">Bet365<br>chance</th><th class="num">Difference</th>
-          <th class="num">Bet365<br>odds</th><th class="num">Model<br>odds</th><th class="num">Expected<br>value</th>
+          <th class="num">Bet365<br>odds</th><th class="num">Model<br>odds</th><th class="num">Expected<br>value</th><th></th>
         </tr></thead>
         <tbody id="valueRows"></tbody>
       </table>
     </div>
     <p class="footnote">Every upcoming outcome whose <b>expected value</b> is at least 10%, highest first. Expected value is the average return per unit staked at Bet365's odds <i>if the model is right</i>. <b>Difference</b> is the model's chance minus Bet365's, in percentage points (pts); <b>Bet365 chance</b> is 1 ÷ Bet365's odds. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
+  </section>
+
+  <section id="mybets" hidden>
+    <div class="section-head">
+      <div><h2>My bets</h2><p id="mybetsSub"></p></div>
+    </div>
+    <div class="tiles" id="mybetsTiles"></div>
+    <div class="card table-wrap" style="margin-top:14px">
+      <table class="data">
+        <thead><tr>
+          <th>Kickoff</th><th>League</th><th>Match</th><th>Pick</th><th>Type</th>
+          <th class="num">Odds</th><th class="num">Stake</th><th>Result</th><th class="num">Profit</th><th>Note</th><th></th>
+        </tr></thead>
+        <tbody id="mybetsRows"></tbody>
+      </table>
+    </div>
+    <p class="footnote">Returns are profit ÷ amount staked. <b>Picks you skipped</b> shows what those picks would have made at the odds you logged: if checking the news helps, it should do worse than your bets. <b>Every value pick</b> bets 1 unit on everything the model rated at 10%+ expected value at Bet365's odds, across all leagues, since your first logged pick. Your log is private: only you can see it.</p>
   </section>
 
   <nav class="league-tabs" id="leagueTabs" role="tablist" aria-label="League"></nav>
@@ -467,6 +528,45 @@ footer p { margin: 6px 0; }
   </footer>
 </div>
 
+<dialog id="authDlg" class="dlg" aria-labelledby="authTitle">
+  <form id="authForm" novalidate>
+    <div class="dlg-head"><h2 id="authTitle">Sign in</h2><button type="button" class="dlg-x" data-close aria-label="Close">×</button></div>
+    <div class="seg" id="authTabs" role="group" aria-label="Sign in or create an account">
+      <button type="button" data-tab="in" aria-pressed="true">Sign in</button>
+      <button type="button" data-tab="up" aria-pressed="false">Create account</button>
+    </div>
+    <p class="dlg-msg" id="authIntro"></p>
+    <label class="fld" id="nameFld" hidden>Display name<input id="authName" type="text" maxlength="30" autocomplete="nickname"></label>
+    <label class="fld">Email<input id="authEmail" type="email" autocomplete="email" required autofocus></label>
+    <label class="fld">Password<input id="authPw" type="password" autocomplete="current-password" required></label>
+    <ul class="pw-rules" id="pwRules" hidden aria-label="Password requirements"></ul>
+    <label class="fld" id="pw2Fld" hidden>Repeat password<input id="authPw2" type="password" autocomplete="new-password"></label>
+    <p class="dlg-err" id="authErr" role="alert"></p>
+    <div class="dlg-actions"><button type="submit" class="btn primary" id="authSubmit">Sign in</button></div>
+  </form>
+</dialog>
+
+<dialog id="betDlg" class="dlg" aria-labelledby="betTitle">
+  <form id="betForm" novalidate>
+    <div class="dlg-head"><h2 id="betTitle">Log a pick</h2><button type="button" class="dlg-x" data-close aria-label="Close">×</button></div>
+    <p class="dlg-msg" id="betMatch"></p>
+    <fieldset class="fld"><legend>Outcome</legend><div class="choice" id="betOutcome"></div></fieldset>
+    <fieldset class="fld"><legend>What did you do?</legend>
+      <div class="choice">
+        <label><input type="radio" name="status" value="bet" checked> I bet on it</label>
+        <label><input type="radio" name="status" value="skip"> I looked into it and skipped it</label>
+      </div>
+    </fieldset>
+    <div class="fld-row">
+      <label class="fld" id="betOddsLbl">Odds you got<input id="betOdds" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="e.g. 2.50" required autofocus></label>
+      <label class="fld" id="betStakeLbl">Stake<input id="betStake" type="number" step="0.01" min="0.01" value="1" inputmode="decimal" required></label>
+    </div>
+    <label class="fld">Note (optional)<textarea id="betNote" maxlength="300" rows="2" placeholder="e.g. checked team news, no key injuries"></textarea></label>
+    <p class="dlg-err" id="betErr" role="alert"></p>
+    <div class="dlg-actions"><button type="submit" class="btn primary">Save</button></div>
+  </form>
+</dialog>
+
 <script id="data" type="application/json">__DATA_JSON__</script>
 <script>
 (function () {
@@ -497,6 +597,248 @@ footer p { margin: 6px 0; }
     try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
     drawChart();
   });
+
+  // ---------- accounts and bet log (Supabase) ----------
+  // The publishable key is meant to be public: the database's row level security
+  // (supabase/schema.sql) limits every signed-in user to their own bets.
+  const SUPABASE_URL = "https://rstembhxuncyttzdmssl.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_d9rES5d3CylqD6sbm6yCbg_TYoxAf2D";
+  const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  let user = null, myBets = [];
+
+  const PW_RULES = [
+    [/.{8,}/, "8+ characters"], [/[a-z]/, "a lowercase letter"], [/[A-Z]/, "a capital letter"],
+    [/[0-9]/, "a number"], [/[^A-Za-z0-9]/, "a special character"],
+  ];
+  const pickLabel = (home, away, o) => (o === "H" ? `${home} win` : o === "A" ? `${away} win` : "Draw");
+  const leagueById = (id) => ALL.leagues.find((l) => l.id === id);
+  const findGame = (lid, home, away) => {
+    const l = leagueById(lid);
+    return l && l.next ? l.next.games.find((g) => g.home === home && g.away === away) : null;
+  };
+  // A "kickoff TBC" fixture stays open until its weekend is over.
+  const hasStarted = (g) => new Date(g.kickoff_utc).getTime() + (g.kickoff_tbc ? 4 * 864e5 : 0) < Date.now();
+  const logButton = (lid, home, away, outcome, text) => (sb
+    ? `<button type="button" class="log-btn" data-log-league="${esc(lid)}" data-log-home="${esc(home)}" data-log-away="${esc(away)}"${outcome ? ` data-log-outcome="${outcome}"` : ""}>${text}</button>`
+    : "");
+
+  // Header: sign in / my bets / sign out
+  function renderAccount() {
+    if (!sb) { $("account").innerHTML = ""; return; }
+    $("account").innerHTML = user
+      ? `<button type="button" class="theme-toggle" data-acct="mine">My bets</button> <span class="acct-name" title="${esc(user.email)}">${esc((user.user_metadata && user.user_metadata.display_name) || user.email)}</span> <button type="button" class="theme-toggle" data-acct="out">Sign out</button>`
+      : `<button type="button" class="theme-toggle" data-acct="in">Sign in</button>`;
+  }
+  $("account").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-acct]");
+    if (!b) return;
+    if (b.dataset.acct === "in") openAuth("in");
+    else if (b.dataset.acct === "out") await sb.auth.signOut();
+    else $("mybets").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  document.querySelectorAll("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
+
+  // ----- sign in / create account dialog -----
+  let authMode = "in";
+  function setAuthMode(mode) {
+    authMode = mode;
+    const up = mode === "up";
+    document.querySelectorAll("#authTabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === mode)));
+    $("authTitle").textContent = up ? "Create an account" : "Sign in";
+    $("nameFld").hidden = !up;
+    $("pw2Fld").hidden = !up;
+    $("pwRules").hidden = !up;
+    $("authPw").autocomplete = up ? "new-password" : "current-password";
+    $("authSubmit").textContent = up ? "Create account" : "Sign in";
+    $("authErr").textContent = "";
+    renderPwRules();
+  }
+  function renderPwRules() {
+    const pw = $("authPw").value;
+    $("pwRules").innerHTML = PW_RULES.map(([re, t]) => `<li class="${re.test(pw) ? "ok" : ""}">${re.test(pw) ? "✓" : "○"} ${t}</li>`).join("");
+  }
+  function openAuth(mode, intro = "") {
+    setAuthMode(mode);
+    $("authIntro").textContent = intro;
+    $("authDlg").showModal();
+  }
+  document.querySelectorAll("#authTabs button").forEach((b) => b.addEventListener("click", () => setAuthMode(b.dataset.tab)));
+  $("authPw").addEventListener("input", renderPwRules);
+  $("authForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("authEmail").value.trim(), pw = $("authPw").value, err = $("authErr");
+    err.textContent = "";
+    if (!email || !pw) { err.textContent = "Enter your email and password."; return; }
+    if (authMode === "up") {
+      const missing = PW_RULES.filter(([re]) => !re.test(pw)).map(([, t]) => t);
+      if (missing.length) { err.textContent = `Your password needs ${missing.join(", ")}.`; return; }
+      if (pw !== $("authPw2").value) { err.textContent = "The two passwords don't match."; return; }
+    }
+    $("authSubmit").disabled = true;
+    try {
+      if (authMode === "up") {
+        const name = $("authName").value.trim() || email.split("@")[0];
+        const { data, error } = await sb.auth.signUp({
+          email, password: pw,
+          options: { data: { display_name: name }, emailRedirectTo: location.origin + location.pathname },
+        });
+        if (error) { err.textContent = error.message; return; }
+        if (!data.session) {
+          setAuthMode("in");
+          $("authIntro").textContent = "Account created. Open the confirmation link we emailed you, then sign in here.";
+          return;
+        }
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+        if (error) { err.textContent = error.message; return; }
+      }
+      $("authForm").reset();
+      $("authDlg").close();
+    } finally {
+      $("authSubmit").disabled = false;
+    }
+  });
+
+  // ----- log a bet dialog -----
+  let betCtx = null;
+  function openBet(lid, home, away, outcome) {
+    if (!user) { openAuth("in", "Sign in to log your bets."); return; }
+    const g = findGame(lid, home, away), L = leagueById(lid);
+    if (!g) return;
+    if (hasStarted(g)) { alert("This match has already kicked off, so it can't be logged any more."); return; }
+    const best = [0, 1, 2].reduce((a, i) => (g.b365 && g.p_model[i] * g.b365[i] > g.p_model[a] * g.b365[a] ? i : a), 0);
+    betCtx = { lid, L, g, oddsEdited: false };
+    $("betMatch").textContent = `${L.name} · ${g.home} vs ${g.away} · ${g.kickoff_tbc ? `weekend of ${fmtDate(g.kickoff)}` : fmtKick(g.kickoff)}`;
+    $("betOutcome").innerHTML = OUT.map((o, i) => `<label><input type="radio" name="outcome" value="${o}"${(outcome || OUT[best]) === o ? " checked" : ""}>
+        ${esc(pickLabel(g.home, g.away, o))} <span class="dim">· model ${pct(g.p[i])}${g.b365 ? ` · Bet365 ${odd(g.b365[i])}` : ""}</span></label>`).join("");
+    $("betForm").reset();
+    $("betForm").querySelector(`input[name=outcome][value="${outcome || OUT[best]}"]`).checked = true;
+    $("betErr").textContent = "";
+    syncBetForm(true);
+    $("betDlg").showModal();
+  }
+  function syncBetForm(resetOdds) {
+    const f = $("betForm"), i = OUT.indexOf(f.outcome.value), skip = f.status.value === "skip";
+    $("betOddsLbl").firstChild.textContent = skip ? "Odds on offer" : "Odds you got";
+    $("betStakeLbl").firstChild.textContent = skip ? "Stake you'd have used" : "Stake";
+    if (resetOdds || !betCtx.oddsEdited) $("betOdds").value = betCtx.g.b365 ? betCtx.g.b365[i] : "";
+  }
+  $("betForm").addEventListener("change", (e) => { if (e.target.name === "outcome" || e.target.name === "status") syncBetForm(false); });
+  $("betOdds").addEventListener("input", () => { betCtx.oddsEdited = true; });
+  $("betForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = $("betForm"), err = $("betErr"), { lid, L, g } = betCtx;
+    const outcome = f.outcome.value, i = OUT.indexOf(outcome);
+    const odds = Number($("betOdds").value), stake = Number($("betStake").value);
+    if (!(odds > 1)) { err.textContent = "Enter the decimal odds, e.g. 2.50."; return; }
+    if (!(stake > 0)) { err.textContent = "Enter a stake above 0."; return; }
+    if (hasStarted(g)) { err.textContent = "This match has already kicked off."; return; }
+    const row = {
+      league: lid, season: L.season, round: g.round, kickoff: g.kickoff_utc, home: g.home, away: g.away,
+      outcome, status: f.status.value, odds, stake,
+      model_chance: Math.round(g.p_model[i] * 1e4) / 1e4, bet365_odds: g.b365 ? g.b365[i] : null,
+      note: $("betNote").value.trim() || null,
+    };
+    f.querySelector("button[type=submit]").disabled = true;
+    const { error } = await sb.from("bets").insert(row);
+    f.querySelector("button[type=submit]").disabled = false;
+    if (error) {
+      err.textContent = error.code === "23505" ? "You've already logged this outcome for this match." : `Couldn't save: ${error.message}`;
+      return;
+    }
+    $("betDlg").close();
+    await loadBets();
+  });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-log-league]");
+    if (b) openBet(b.dataset.logLeague, b.dataset.logHome, b.dataset.logAway, b.dataset.logOutcome);
+  });
+
+  // ----- my bets -----
+  async function loadBets() {
+    if (!user) { myBets = []; renderMyBets(); return; }
+    const { data, error } = await sb.from("bets").select("*").order("kickoff", { ascending: false });
+    myBets = error ? [] : data;
+    renderMyBets(error ? `Couldn't load your bets: ${error.message}` : "");
+  }
+  // A logged pick's result, from the site's own played matches (null while it's pending).
+  function settle(b) {
+    const L = leagueById(b.league);
+    const m = L && L.season === b.season ? L.matches.find((x) => x.home === b.home && x.away === b.away) : null;
+    if (!m) return null;
+    const won = m.result === b.outcome, stake = Number(b.stake), odds = Number(b.odds);
+    return { m, won, profit: won ? stake * (odds - 1) : -stake };
+  }
+  const signed = (x, d = 2) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(d)}`;
+  function record(items) {  // items: [{stake, profit}] of settled picks
+    const staked = items.reduce((a, x) => a + x.stake, 0), profit = items.reduce((a, x) => a + x.profit, 0);
+    return { n: items.length, won: items.filter((x) => x.profit > 0).length, staked, profit, roi: staked ? profit / staked : null };
+  }
+  function renderMyBets(problem = "") {
+    $("mybets").hidden = !user;
+    if (!user) return;
+    const rows = myBets.map((b) => ({ b, s: settle(b) }));
+    const settled = (status) => rows.filter((r) => r.b.status === status && r.s).map((r) => ({ stake: Number(r.b.stake), profit: r.s.profit }));
+    const mine = record(settled("bet")), skipped = record(settled("skip"));
+    const pending = rows.filter((r) => !r.s).length;
+    // Benchmark: 1 unit on every outcome the model rated at 10%+ expected value at Bet365's odds,
+    // across all leagues, in played matches since the user's first logged pick.
+    const since = myBets.length ? myBets.map((b) => b.kickoff.slice(0, 10)).sort()[0] : null;
+    const bench = [];
+    if (since) ALL.leagues.forEach((L) => L.matches.forEach((m) => {
+      if (m.kickoff.slice(0, 10) < since || m.b365.some((x) => x == null)) return;
+      OUT.forEach((o, i) => {
+        if (m.p[i] * m.b365[i] - 1 >= 0.10) bench.push({ stake: 1, profit: m.result === o ? m.b365[i] - 1 : -1 });
+      });
+    }));
+    const all = record(bench);
+    const roiTxt = (r) => (r.roi == null ? "–" : `${signed(r.roi * 100, 1)}%`);
+    $("mybetsSub").textContent = problem || (myBets.length
+      ? `${myBets.length} logged pick${myBets.length === 1 ? "" : "s"}${pending ? `, ${pending} still to be played` : ""}. Results fill in automatically once matches are played.`
+      : "Nothing logged yet. Use “Log a bet” on a match card or “Log” in the value table to record a pick you bet on or decided to skip.");
+    $("mybetsTiles").innerHTML = [
+      ["Your bets", roiTxt(mine), mine.n ? `${mine.n} settled · ${mine.won} won · ${signed(mine.profit)} on ${mine.staked.toFixed(2)} staked` : "No settled bets yet"],
+      ["Picks you skipped", roiTxt(skipped), skipped.n ? `${skipped.n} settled · ${skipped.won} would have won · ${signed(skipped.profit)} if you'd bet them` : "No settled skips yet"],
+      ["Every value pick", roiTxt(all), all.n ? `1 unit on all ${all.n} outcomes with 10%+ expected value at Bet365's odds since your first pick` : "Appears once your first pick's round is played"],
+    ].map(([l, v, c]) => `<div class="card tile"><div class="label">${l}</div><div class="value">${v}</div><div class="cmp">${c}</div></div>`).join("");
+    $("mybetsRows").innerHTML = rows.length ? rows.map(({ b, s }) => {
+      const L = leagueById(b.league), when = new Date(b.kickoff);
+      const res = s ? `<span class="res ${s.won ? "W" : "L"}">${s.won ? "Won" : "Lost"} ${s.m.score[0]}–${s.m.score[1]}</span>` : `<span class="dim">Pending</span>`;
+      const profit = s ? `<span class="${b.status === "skip" ? "dim" : s.profit > 0 ? "up" : "down"}">${signed(s.profit)}</span>` : "–";
+      return `<tr>
+        <td>${esc(DAY.format(when))}</td>
+        <td>${esc(L ? L.name : b.league)}</td>
+        <td>${esc(b.home)} – ${esc(b.away)}</td>
+        <td class="outcome-cell">${esc(pickLabel(b.home, b.away, b.outcome))}</td>
+        <td><span class="tag ${b.status}">${b.status === "bet" ? "Bet" : "Skipped"}</span></td>
+        <td class="num">${odd(b.odds)}</td>
+        <td class="num">${Number(b.stake).toFixed(2)}</td>
+        <td>${res}</td>
+        <td class="num" title="${b.status === "skip" ? "What it would have made" : ""}">${profit}</td>
+        <td class="note-cell" title="${esc(b.note || "")}">${esc(b.note || "")}</td>
+        <td><button type="button" class="del-btn" data-del="${b.id}" aria-label="Delete this pick" title="Delete">×</button></td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="11" class="dim">No picks logged yet.</td></tr>`;
+  }
+  $("mybetsRows").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-del]");
+    if (!b || !confirm("Delete this pick from your log?")) return;
+    const { error } = await sb.from("bets").delete().eq("id", b.dataset.del);
+    if (error) alert(`Couldn't delete: ${error.message}`);
+    await loadBets();
+  });
+
+  renderAccount();
+  if (sb) {
+    // Supabase calls inside this callback must be deferred (setTimeout), or they can deadlock.
+    sb.auth.onAuthStateChange((event, session) => {
+      const next = session ? session.user : null;
+      if ((next && next.id) === (user && user.id) && event !== "USER_UPDATED") return;
+      user = next;
+      renderAccount();
+      setTimeout(loadBets, 0);
+    });
+  }
 
   // ---------- league switcher (selection kept in the URL: #bundesliga) ----------
   $("leagueTabs").innerHTML = ALL.leagues.map((l) =>
@@ -578,6 +920,7 @@ footer p { margin: 6px 0; }
         <details class="more"><summary>Expected goals ${g.xg[0]} – ${g.xg[1]} · likeliest scores</summary>
           <div class="scores">${g.scores.map((s) => `<span class="score-chip"><b>${esc(s.score)}</b> ${pct1(s.p)} · ${odd(s.odds)}</span>`).join("")}</div>
         </details>
+        ${sb && !hasStarted(g) ? `<div class="card-actions">${logButton(DATA.id, g.home, g.away, null, "Log a bet")}</div>` : ""}
       </article>`;
     }).join("");
   }
@@ -915,7 +1258,7 @@ footer p { margin: 6px 0; }
     const rows = ALL.differences || [];
     if (!rows.length) {
       $("valueSub").textContent = "";
-      $("valueRows").innerHTML = `<tr><td colspan="11" class="dim">Nothing to compare yet: Bet365 odds for the upcoming matches aren't posted (football-data.co.uk adds them on Tuesdays for midweek rounds and Fridays for weekend rounds), or no outcome reaches an expected value of 10%.</td></tr>`;
+      $("valueRows").innerHTML = `<tr><td colspan="12" class="dim">Nothing to compare yet: Bet365 odds for the upcoming matches aren't posted (football-data.co.uk adds them on Tuesdays for midweek rounds and Fridays for weekend rounds), or no outcome reaches an expected value of 10%.</td></tr>`;
       return;
     }
     $("valueSub").textContent = `${rows.length} upcoming outcome${rows.length === 1 ? "" : "s"} with an expected value of 10% or more, highest first.`;
@@ -934,6 +1277,7 @@ footer p { margin: 6px 0; }
         <td class="num">${odd(r.odds_b365)}</td>
         <td class="num">${odd(r.odds_model)}</td>
         <td class="num ${ev > 0 ? "ev-pos" : "ev-neg"}">${ev > 0 ? "▲ +" : ""}${ev.toFixed(1)}%</td>
+        <td>${logButton(r.league_id, r.home, r.away, r.outcome, "Log")}</td>
       </tr>`;
     }).join("");
   }

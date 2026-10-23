@@ -91,6 +91,23 @@ The page's source is `src/site/page_template.html` (layout, styling, charts); ed
 the site. `src/site/build_site.py` fills it with the data and writes the finished page to
 `generated_site/index.html` -- build output that is never committed and safe to delete.
 
+## Accounts and bet log
+
+Visitors can create an account on the page and log picks from the next-round cards and the value
+table -- bets they placed and picks they looked into and skipped. "My bets" settles them from the
+site's own results and compares the return with the skipped picks and with betting every value pick.
+
+Accounts and the log live in Supabase (project `rstembhxuncyttzdmssl`); the site stays on GitHub
+Pages and talks to Supabase from the browser with the project's publishable key, which is meant to
+be public. Supabase Auth stores passwords as bcrypt hashes. One-time setup in the Supabase dashboard:
+
+1. SQL Editor: run `supabase/schema.sql` (the `bets` table and its row level security: each user
+   can only read, add and delete their own picks).
+2. Authentication → Providers → Email: minimum password length 8, required characters
+   "lowercase, uppercase letters, digits and symbols" (the page checks the same rules).
+3. Authentication → URL Configuration: set the Site URL to the GitHub Pages address, so the
+   confirmation email links back to the site.
+
 Preview locally: `python src/site/build_site.py`, then open `generated_site/index.html`
 (add `#bundesliga` to the address to open a specific league).
 One-time setup on GitHub: Settings → Pages → Source: **GitHub Actions**.

@@ -139,6 +139,7 @@ def next_round(log, fixtures, b365_odds):
         games.append({
             "round": int(r.round), "kickoff": str(r.kickoff), "home": r.home_team, "away": r.away_team,
             "kickoff_tbc": bool(tbc.get((r.home_team, r.away_team, r.round), False)),
+            "kickoff_utc": pd.Timestamp(r.kickoff).tz_localize("Europe/London").tz_convert("UTC").isoformat(),
             "p_model": p, "p": [round(x, 4) for x in shown], "odds": [priced_odds(x) for x in p],
             "xg": [num(r.lambda_home + r.lambda_shared, 2), num(r.lambda_away + r.lambda_shared, 2)],
             "elo": [num(r.home_elo, 0), num(r.away_elo, 0)],
