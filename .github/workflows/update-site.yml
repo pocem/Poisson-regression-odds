@@ -62,6 +62,14 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python src/site/build_site.py
 
+      - name: Sync results to Supabase
+        # Settles logged bets for the leaderboard (skipped without the secret). A failure
+        # here mustn't stop the data commit or the deploy.
+        continue-on-error: true
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: python src/site/sync_results.py
+
       - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"

@@ -249,6 +249,9 @@ footer p { margin: 6px 0; }
 /* Accounts and bet log */
 #account { white-space: nowrap; }
 .acct-name { color: var(--ink-2); font-weight: 600; }
+#boardRows tr.me td { background: var(--surface-2); }
+#boardRows tr.model td { color: var(--ink-2); font-style: italic; border-top: 1px dashed var(--axis); }
+.you { font-size: 11.5px; font-weight: 650; color: var(--s1); margin-left: 6px; }
 .signin-btn { font: inherit; font-size: 14px; font-weight: 650; color: var(--page); background: var(--ink); border: 1px solid var(--ink); border-radius: 8px; padding: 6px 16px; cursor: pointer; }
 .signin-btn:hover { opacity: 0.85; }
 .signin-btn:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
@@ -393,6 +396,22 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       </table>
     </div>
     <p class="footnote">Every upcoming outcome whose <b>expected value</b> is at least 10%, highest first. Expected value is the average return per unit staked at Bet365's odds <i>if the model is right</i>. <b>Difference</b> is the model's chance minus Bet365's, in percentage points (pts); <b>Bet365 chance</b> is 1 ÷ Bet365's odds. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
+  </section>
+
+  <section id="board" hidden>
+    <div class="section-head">
+      <div><h2>Leaderboard</h2><p id="boardSub"></p></div>
+    </div>
+    <div class="card table-wrap">
+      <table class="data">
+        <thead><tr>
+          <th class="num">#</th><th>Player</th><th class="num">Bets</th><th class="num">Won</th>
+          <th class="num">Avg odds</th><th class="num">Score</th><th class="num">Return</th>
+        </tr></thead>
+        <tbody id="boardRows"></tbody>
+      </table>
+    </div>
+    <p class="footnote"><b>Score</b> is the profit if every bet had been 1 unit: a win at odds 3.00 scores +2, a loss −1. Stakes don't count, so a big stake can't buy the top spot. <b>Return</b> is the score per settled bet. Only bets count, not skipped picks; bets are settled after each site update once their match is played. The <b>model</b> row bets 1 unit on every outcome it rated at 10%+ expected value at Bet365's odds, since the first bet on the board. Other players see your name and totals, never your individual bets.</p>
   </section>
 
   <section id="mybets" hidden>
@@ -541,12 +560,12 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       <button type="button" data-tab="up" aria-pressed="false">Create account</button>
     </div>
     <p class="dlg-msg" id="authIntro"></p>
-    <label class="fld" id="nameFld" hidden>Display name<input id="authName" type="text" maxlength="30" autocomplete="nickname"></label>
+    <label class="fld" id="nameFld" hidden>Display name (shown on the leaderboard)<input id="authName" type="text" maxlength="30" autocomplete="nickname"></label>
     <label class="fld">Email<input id="authEmail" type="email" autocomplete="email" required autofocus></label>
     <label class="fld">Password<input id="authPw" type="password" autocomplete="current-password" required></label>
     <ul class="pw-rules" id="pwRules" hidden aria-label="Password requirements"></ul>
     <label class="fld" id="pw2Fld" hidden>Repeat password<input id="authPw2" type="password" autocomplete="new-password"></label>
-    <p class="dlg-note" id="authNote" hidden>Accounts are handled by Supabase. Your password is stored only as a salted bcrypt hash, never in plain text, and your bet log is private to you.</p>
+    <p class="dlg-note" id="authNote" hidden>Accounts are handled by Supabase. Your password is stored only as a salted bcrypt hash, never in plain text. Signed-in players see your display name and betting totals on the leaderboard, never your individual bets.</p>
     <p class="dlg-err" id="authErr" role="alert"></p>
     <div class="dlg-actions"><button type="submit" class="btn primary" id="authSubmit">Sign in</button></div>
   </form>
@@ -684,7 +703,8 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     $("authSubmit").disabled = true;
     try {
       if (authMode === "up") {
-        const name = $("authName").value.trim() || email.split("@")[0];
+        const name = $("authName").value.trim();
+        if (!name) { err.textContent = "Choose a display name: it's what other players see on the leaderboard."; return; }
         const { data, error } = await sb.auth.signUp({
           email, password: pw,
           options: { data: { display_name: name }, emailRedirectTo: location.origin + location.pathname },
@@ -755,6 +775,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     }
     $("betDlg").close();
     await loadBets();
+    loadBoard();
   });
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-log-league]");
@@ -781,16 +802,9 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     const staked = items.reduce((a, x) => a + x.stake, 0), profit = items.reduce((a, x) => a + x.profit, 0);
     return { n: items.length, won: items.filter((x) => x.profit > 0).length, staked, profit, roi: staked ? profit / staked : null };
   }
-  function renderMyBets(problem = "") {
-    $("mybets").hidden = !user;
-    if (!user) return;
-    const rows = myBets.map((b) => ({ b, s: settle(b) }));
-    const settled = (status) => rows.filter((r) => r.b.status === status && r.s).map((r) => ({ stake: Number(r.b.stake), profit: r.s.profit }));
-    const mine = record(settled("bet")), skipped = record(settled("skip"));
-    const pending = rows.filter((r) => !r.s).length;
-    // Benchmark: 1 unit on every outcome the model rated at 10%+ expected value at Bet365's odds,
-    // across all leagues, in played matches since the user's first logged pick.
-    const since = myBets.length ? myBets.map((b) => b.kickoff.slice(0, 10)).sort()[0] : null;
+  // Benchmark: 1 unit on every outcome the model rated at 10%+ expected value at Bet365's odds,
+  // across all leagues, in played matches since a date ("YYYY-MM-DD").
+  function valuePicksSince(since) {
     const bench = [];
     if (since) ALL.leagues.forEach((L) => L.matches.forEach((m) => {
       if (m.kickoff.slice(0, 10) < since || m.b365.some((x) => x == null)) return;
@@ -798,7 +812,59 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
         if (m.p[i] * m.b365[i] - 1 >= 0.10) bench.push({ stake: 1, profit: m.result === o ? m.b365[i] - 1 : -1 });
       });
     }));
-    const all = record(bench);
+    return record(bench);
+  }
+
+  // ----- leaderboard (scored in Supabase: supabase/leaderboard.sql) -----
+  async function loadBoard() {
+    if (!sb) return;
+    $("board").hidden = false;
+    if (!user) {
+      $("boardSub").textContent = "";
+      $("boardRows").innerHTML = `<tr><td colspan="7" class="dim">Sign in to see how everyone's bets are doing.</td></tr>`;
+      return;
+    }
+    const { data, error } = await sb.rpc("leaderboard");
+    if (error) {
+      $("boardSub").textContent = "";
+      $("boardRows").innerHTML = `<tr><td colspan="7" class="dim">Couldn't load the leaderboard: ${esc(error.message)}</td></tr>`;
+      return;
+    }
+    const rows = data.map((r) => ({ ...r, score: Number(r.score), avg_odds: Number(r.avg_odds) }))
+      .sort((a, b) => b.score - a.score || b.settled - a.settled);
+    const since = rows.length ? rows.map((r) => r.first_kickoff.slice(0, 10)).sort()[0] : null;
+    const model = valuePicksSince(since);
+    const ret = (score, n) => (n ? `${signed((score / n) * 100, 1)}%` : "–");
+    $("boardSub").textContent = rows.length
+      ? `${rows.length} player${rows.length === 1 ? "" : "s"}, ranked by score.`
+      : "No bets on the board yet. Log a bet on a match card to get on it.";
+    $("boardRows").innerHTML = rows.map((r, i) => `<tr class="${r.is_me ? "me" : ""}">
+        <td class="num dim">${i + 1}</td>
+        <td>${esc(r.player)}${r.is_me ? `<span class="you">you</span>` : ""}</td>
+        <td class="num" title="${r.bets - r.settled} still to be played">${r.settled}${r.bets > r.settled ? ` <span class="dim">+${r.bets - r.settled}</span>` : ""}</td>
+        <td class="num">${r.won}</td>
+        <td class="num">${odd(r.avg_odds)}</td>
+        <td class="num"><b class="${r.score > 0 ? "up" : r.score < 0 ? "down" : ""}">${signed(r.score)}</b></td>
+        <td class="num">${ret(r.score, r.settled)}</td>
+      </tr>`).join("") + (model.n ? `<tr class="model">
+        <td class="num"></td>
+        <td>Model: every value pick</td>
+        <td class="num">${model.n}</td>
+        <td class="num">${model.won}</td>
+        <td class="num">–</td>
+        <td class="num">${signed(model.profit)}</td>
+        <td class="num">${ret(model.profit, model.n)}</td>
+      </tr>` : "");
+  }
+
+  function renderMyBets(problem = "") {
+    $("mybets").hidden = !user;
+    if (!user) return;
+    const rows = myBets.map((b) => ({ b, s: settle(b) }));
+    const settled = (status) => rows.filter((r) => r.b.status === status && r.s).map((r) => ({ stake: Number(r.b.stake), profit: r.s.profit }));
+    const mine = record(settled("bet")), skipped = record(settled("skip"));
+    const pending = rows.filter((r) => !r.s).length;
+    const all = valuePicksSince(myBets.length ? myBets.map((b) => b.kickoff.slice(0, 10)).sort()[0] : null);
     const roiTxt = (r) => (r.roi == null ? "–" : `${signed(r.roi * 100, 1)}%`);
     $("mybetsSub").textContent = problem || (myBets.length
       ? `${myBets.length} logged pick${myBets.length === 1 ? "" : "s"}${pending ? `, ${pending} still to be played` : ""}. Results fill in automatically once matches are played.`
@@ -833,9 +899,11 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     const { error } = await sb.from("bets").delete().eq("id", b.dataset.del);
     if (error) alert(`Couldn't delete: ${error.message}`);
     await loadBets();
+    loadBoard();
   });
 
   renderAccount();
+  loadBoard();
   if (sb) {
     // Supabase calls inside this callback must be deferred (setTimeout), or they can deadlock.
     sb.auth.onAuthStateChange((event, session) => {
@@ -843,7 +911,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       if ((next && next.id) === (user && user.id) && event !== "USER_UPDATED") return;
       user = next;
       renderAccount();
-      setTimeout(loadBets, 0);
+      setTimeout(() => { loadBets(); loadBoard(); }, 0);
     });
   }
 

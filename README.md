@@ -107,6 +107,14 @@ be public. Supabase Auth stores passwords as bcrypt hashes. One-time setup in th
    "lowercase, uppercase letters, digits and symbols" (the page checks the same rules).
 3. Authentication → URL Configuration: set the Site URL to the GitHub Pages address, so the
    confirmation email links back to the site.
+4. SQL Editor: run `supabase/leaderboard.sql` (the `results` table and the `leaderboard()`
+   function, which scores every logged bet and returns per-player totals only).
+5. Project Settings → API Keys: create a secret key and add it as the `SUPABASE_SECRET_KEY`
+   repository secret on GitHub. After each build, `src/site/sync_results.py` uses it to upload the
+   season's results, which settle the bets on the leaderboard. Never put it in the page.
+
+The leaderboard (signed-in users only) ranks players by score: the profit if every bet had been 1
+unit, so stakes don't decide the ranking. Skipped picks don't count.
 
 Preview locally: `python src/site/build_site.py`, then open `generated_site/index.html`
 (add `#bundesliga` to the address to open a specific league).
