@@ -125,6 +125,11 @@ return, profit at their stakes, wins against what the odds implied, how their be
 list do against every value pick, the model's rating of their bets, score over time and a
 breakdown by odds.
 
+The page is split into four pages under a navigation bar: **This round** (`#round/<league>`, the
+default: round summary, value table and the next round's predictions), **Season stats**
+(`#season/<league>`: season performance, team charts, every match, Elo), **Leaderboard**
+(`#leaderboard`) and **My page** (`#me`).
+
 Preview locally: `python src/site/build_site.py`, then open `generated_site/index.html`
-(add `#bundesliga` to the address to open a specific league).
+(add e.g. `#season/bundesliga` to the address to open a specific page and league).
 One-time setup on GitHub: Settings → Pages → Source: **GitHub Actions**.
