@@ -116,6 +116,11 @@ be public. Supabase Auth stores passwords as bcrypt hashes. One-time setup in th
 The leaderboard (signed-in users only) ranks players by score: the profit if every bet had been 1
 unit, so stakes don't decide the ranking. Skipped picks don't count.
 
+"My page" (`#me`) shows a signed-in user's own stats: score and rank, return, profit at their
+stakes, wins against what Bet365's closing odds expected, closing-line value (their odds against
+Bet365's closing odds, from football-data.co.uk's `B365CH/CD/CA`), how their bets from the value list
+do against every value pick, skipped picks, score over time and a breakdown by odds.
+
 Preview locally: `python src/site/build_site.py`, then open `generated_site/index.html`
 (add `#bundesliga` to the address to open a specific league).
 One-time setup on GitHub: Settings → Pages → Source: **GitHub Actions**.
