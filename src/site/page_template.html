@@ -10,7 +10,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Poisson Regression Football Odds</title>
-<meta name="description" content="Bivariate Poisson model odds for every Premier League match, from a model trained on the last three seasons and compared with Bet365.">
+<meta name="description" content="Our own football odds for Europe's top five leagues, compared with the bookmaker's to find where the two disagree most.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <style>
@@ -147,6 +147,13 @@ section { margin-top: 36px; }
 .pc-diff { font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .key.model { background: var(--s1); } .key.book { background: var(--s2); }
+.about { margin-top: 26px; padding: 20px 22px; border-radius: 14px; background: var(--surface-2); }
+.about h2 { margin: 0 0 12px; }
+.about-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 26px; }
+.about h3 { margin: 0 0 4px; font-size: 15px; }
+.about p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
+.about .about-note { margin-top: 14px; font-size: 13px; color: var(--muted); }
+.ai-tag { display: inline-block; vertical-align: 3px; margin-left: 6px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 11.5px; font-weight: 600; color: var(--ink-2); letter-spacing: 0.02em; }
 .summary-card { padding: 16px 18px; font-size: 15px; line-height: 1.6; }
 .summary-card p { margin: 0 0 10px; }
 .summary-card p:last-child { margin-bottom: 0; }
@@ -415,9 +422,28 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     <a href="#leaderboard" data-page="leaderboard" data-needs-accounts><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg><span>Leaderboard</span></a>
     <a href="#me" data-page="me" data-needs-accounts><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>My page</span></a>
   </nav>
+  <section id="about" class="about" data-views="round" aria-labelledby="aboutTitle">
+    <h2 id="aboutTitle">What this is</h2>
+    <div class="about-grid">
+      <div>
+        <h3>Our own odds</h3>
+        <p>A Poisson regression model predicts the goals in every match of Europe's top five leagues and turns them into its own chances and odds for a home win, draw and away win, updated every round.</p>
+      </div>
+      <div>
+        <h3>Compared with the market</h3>
+        <p>Next to every prediction are Bet365's real odds. Where the model rates an outcome clearly higher than the bookmaker, there could be value: the table below lists those disagreements, biggest expected value first.</p>
+      </div>
+      <div>
+        <h3>Track your bets</h3>
+        <p>Create an account and log the bets you actually place, at the odds shown here. My page shows how they're doing, and the leaderboard how you compare with everyone else and with the model.</p>
+      </div>
+    </div>
+    <p class="about-note">Disagreements are worth a closer look, not sure things: the bookmaker is right more often than not. Nothing here is betting advice.</p>
+  </section>
+
   <section id="summary" class="summary-section" data-views="round" hidden>
     <div class="section-head">
-      <div><h2>This round</h2><p id="summarySub"></p></div>
+      <div><h2>Round summary <span class="ai-tag">AI-written</span></h2><p id="summarySub"></p></div>
     </div>
     <div class="card summary-card" id="summaryText"></div>
   </section>
@@ -605,16 +631,16 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
 
   <section id="elo" data-views="season">
     <div class="section-head">
-      <div><h2>Elo ratings<span aria-hidden="true">*</span></h2><p>Computed from results with the standard Elo formula; change is since each team's first match this season.</p></div>
+      <div><h2>Elo ratings<span aria-hidden="true">*</span></h2><p>A team-strength rating that rises with wins and falls with defeats; change is since each team's first match this season.</p></div>
     </div>
     <div class="card elo-grid" id="eloRows"></div>
     <p class="footnote" id="eloNote"></p>
   </section>
 
   <footer>
-    <p><strong>How it works.</strong> Each league has its own model. A bivariate Poisson regression predicts each side's goals from Elo, rolling xG and xGA, points per game and shots-on-target difference. The model is trained once on the last three completed seasons and stays frozen for the whole season; each round only its inputs are updated with the latest results, so this season's form reaches it through Elo, xG, points per game and shots, not through refitting. Its goal predictions are turned into home / draw / away probabilities and scoreline odds.</p>
-    <p><strong>Played matches.</strong> Each shows the prediction logged before kickoff where one exists; otherwise it is recreated with the same frozen model and only the data available before that match.</p>
-    <p>Data: football-data.co.uk (results, stats, Bet365 odds), Understat (xG), fixturedownload.com (fixtures).</p>
+    <p><strong>How it works.</strong> Each league has its own statistical model, built on several seasons of match data and updated with the latest results every round. It predicts how many goals each side will score, and turns that into home / draw / away chances, odds and likeliest scorelines.</p>
+    <p><strong>Played matches.</strong> Each shows the prediction made before kickoff, using only what was known at the time.</p>
+    <p>Data: football-data.co.uk (results and Bet365 odds), fixturedownload.com (fixtures).</p>
   </footer>
 </div>
 
@@ -1145,16 +1171,17 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
   // ---------- header + status ----------
   function renderHeader() {
     const nb = (s) => s.replace("-", "‑");  // non-breaking hyphen: "23‑24" never splits across lines
-    $("subtitle").textContent = `${DATA.name} ${nb(DATA.season)} · bivariate Poisson model trained on ${DATA.train_seasons.map(nb).join(", ")}, frozen for the season; inputs updated every round`;
+    $("subtitle").textContent = `${DATA.name} ${nb(DATA.season)} · our model's odds next to Bet365's, updated every round`;
     const st = DATA.status;
     if (!st) { $("status").innerHTML = ""; return; }
     const ok = ["predicted", "unchanged"].includes(st.status);
     const when = st.run_timestamp ? new Date(st.run_timestamp).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : "";
-    const probs = (st.problems || []).length && st.status === "not_ready"
-      ? "<ul>" + st.problems.map((p) => `<li>${esc(p)}</li>`).join("") + "</ul>" : "";
     $("status").innerHTML = `<div class="status ${ok ? "ok" : "warn"}" role="status"><span class="icon">${ok ? "✓" : "!"}</span>
-      <div><strong>${ok ? "Up to date" : st.status === "not_ready" ? "Waiting for data" : st.status === "error" ? "Pipeline error" : "Note"}</strong> — ${esc(st.message)}
-      <span style="opacity:.8"> (pipeline ran ${esc(when)})</span>${probs}</div></div>`;
+      <div><strong>${ok ? "Up to date" : st.status === "not_ready" ? "Waiting for data" : "Not updated"}</strong> — ${esc(
+        ok ? st.message
+          : st.status === "not_ready" ? "The latest results aren't in all our data yet; predictions update once they are."
+          : "This update didn't go through; the latest available predictions are shown.")}
+      <span style="opacity:.8"> (checked ${esc(when)})</span></div></div>`;
   }
 
   // ---------- next round ----------
@@ -1521,8 +1548,8 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
 
   // ---------- Elo ----------
   function renderElo() {
-    $("eloNote").textContent = `* Elo is computed by this model from the ${seasonLabel(DATA.elo_since)} season onwards ` +
-      `and moves with ${DATA.name} matches only. Champions League, other European and domestic cup games don't affect it, ` +
+    $("eloNote").textContent = `* Calculated from ${DATA.name} matches only, since the ${seasonLabel(DATA.elo_since)} season: ` +
+      `Champions League, other European and domestic cup games don't affect it, ` +
       `so these ratings differ from published Elo ratings such as ClubElo.`;
     $("eloRows").innerHTML = DATA.elo.map((e, i) => {
       const c = e.change, cls = c > 0.5 ? "up" : c < -0.5 ? "down" : "flat";
@@ -1566,7 +1593,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     const s = ALL.round_summary;
     if (!s || !s.text) return;
     $("summaryText").innerHTML = s.text.split(/\n\s*\n/).map((p) => `<p>${esc(p.trim())}</p>`).join("");
-    $("summarySub").textContent = `Written by AI (Google Gemini) from the data on this page, ${new Date(s.generated_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. Not betting advice.`;
+    $("summarySub").textContent = `Written by AI (Google Gemini) from this round's predictions and results, ${new Date(s.generated_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. Not betting advice.`;
     $("summary").hidden = false;
   })();
 

@@ -31,8 +31,8 @@ API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:gener
 RETRY_WAITS = [10, 30]  # seconds before retrying an overloaded / rate-limited model
 RETRYABLE = {429, 500, 503}
 
-SYSTEM = """You write the weekly round summary for a football prediction website. A bivariate \
-Poisson regression model predicts home win / draw / away win chances for Premier League, \
+SYSTEM = """You write the weekly round summary for a football prediction website. A statistical \
+model predicts home win / draw / away win chances for Premier League, \
 Bundesliga, La Liga, Serie A and Ligue 1 matches, and the site compares them with Bet365's odds.
 
 You get the data as JSON. Write for football fans who are not statisticians:
@@ -48,7 +48,8 @@ bullet points or tables. Quote only the numbers that make a point, not every fig
 Rules: chances are percentages and odds are decimal odds. Don't discuss bookmaker margins or \
 overrounds, and don't add figures that aren't in the data. Over its test seasons the model has \
 been slightly less accurate than Bet365, so present disagreements as worth a closer look, \
-never as tips or sure things, and don't encourage betting."""
+never as tips or sure things, and don't encourage betting. Don't describe how the model works \
+or what data or statistics it uses: just call it "the model"."""
 
 
 def _pct(p):
@@ -69,7 +70,6 @@ def summary_input(data):
                 "model_odds_hda": g["odds"],
                 "bet365_odds_hda": g["b365"],
                 "bet365_chance_pct_hda": [_pct(x) for x in g["b365_prob"]] if g["b365_prob"] else None,
-                "elo": g["elo"],
                 "expected_goals": g["xg"],
             })
         latest = max((m["round"] for m in lg["matches"]), default=None)
