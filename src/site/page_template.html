@@ -296,6 +296,9 @@ body.me-view .wrap > :not(header):not(footer):not(.me-only) { display: none !imp
 .btn:focus-visible, .log-btn:focus-visible, .dlg-x:focus-visible, .del-btn:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
 .log-btn { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--s1); background: none; border: 1px solid var(--border); border-radius: 7px; padding: 3px 9px; cursor: pointer; white-space: nowrap; }
 .log-btn:hover { background: var(--surface-2); }
+.log-note { margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: var(--surface-2); color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.log-note[hidden] { display: none; }
+.log-note b { color: var(--ink); }
 .game .card-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
 .tag { font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 5px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
 .tag.bet { background: var(--s1); color: #fff; }
@@ -473,6 +476,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       <div><h2 id="nextTitle">Next round</h2><p id="nextSub"></p></div>
       <div class="legend" id="nextLegend" aria-hidden="true"></div>
     </div>
+    <p class="log-note" id="logNote" hidden><b>Logging a bet:</b> press “Log a bet” on a match only when you've actually placed that bet. It's recorded at the Bet365 odds shown here and counts in your statistics on My page and on the leaderboard. Once logged it can't be changed, and it can be deleted only until kickoff.</p>
     <div class="games" id="games"></div>
   </section>
 
@@ -1115,6 +1119,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
   function renderNext() {
     const nx = DATA.next;
     if (!nx) {
+      $("logNote").hidden = true;
       $("nextTitle").textContent = "Next round";
       $("nextSub").textContent = "";
       $("games").innerHTML = `<div class="card empty">No upcoming predictions yet — they appear once the pipeline has run with the latest results.</div>`;
@@ -1128,6 +1133,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
                : "Bet365 odds appear here once football-data.co.uk posts them (Tuesdays for midweek rounds, Fridays for weekend rounds).");
     $("nextLegend").innerHTML = `<span><span class="key model"></span>Model</span>` +
       (anyBook ? `<span><span class="key book"></span>Bet365</span>` : "");
+    $("logNote").hidden = !sb;
     $("games").innerHTML = nx.games.map((g) => {
       const extra = g.round !== nx.round ? ` · rearranged from round ${g.round}` : "";
       const labels = [g.home, "Draw", g.away];
