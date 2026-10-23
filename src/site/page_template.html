@@ -280,6 +280,7 @@ body.me-view .wrap > :not(header):not(footer):not(.me-only) { display: none !imp
 .fld input:not([type=radio]), .fld textarea { font: inherit; font-size: 15px; color: var(--ink); background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; width: 100%; }
 .fld textarea { resize: vertical; }
 .fld input:focus-visible, .fld textarea:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+.odds-fixed { font-size: 22px; font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; padding: 4px 0; }
 .fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .choice { display: grid; gap: 6px; }
 .choice label { display: flex; gap: 8px; align-items: baseline; font-size: 14px; color: var(--ink); cursor: pointer; }
@@ -432,7 +433,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       <div class="card me-verdict" id="meVerdict"></div>
       <h3 class="me-h">Are you making smart bets?</h3>
       <div class="tiles" id="meSmart"></div>
-      <p class="footnote"><b>Closing-line value</b> compares your odds with Bet365's final odds at kickoff (with the bookmaker's margin taken out): positive means you got a better price than the market ended up at. <b>Value list</b> bets are outcomes the model rated at 10%+ expected value at Bet365's odds when you logged them; every value pick bets 1 unit on all of them, across all leagues, since your first logged pick. All returns here count each bet as 1 unit.</p>
+      <p class="footnote"><b>Value list</b> bets are outcomes the model rated at 10%+ expected value at the Bet365 odds you bet at; <b>every value pick</b> bets 1 unit on all of them, across all leagues, since your first bet. All returns here count each bet as 1 unit.</p>
       <div class="card chart-card">
         <strong style="font-size:14px">Your score over time</strong>
         <div class="meta">The running 1-unit score after each settled bet. Green dots are wins, red are losses; hover a dot for the match.</div>
@@ -441,7 +442,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       <h3 class="me-h">By odds</h3>
       <div class="card table-wrap">
         <table class="data">
-          <thead><tr><th>Your odds</th><th class="num">Bets</th><th class="num">Won</th><th class="num">Score</th><th class="num">Return</th><th class="num">Closing-line value</th></tr></thead>
+          <thead><tr><th>Your odds</th><th class="num">Bets</th><th class="num">Won</th><th class="num" title="Wins Bet365's odds implied">Wins the odds implied</th><th class="num">Score</th><th class="num">Return</th></tr></thead>
           <tbody id="meBands"></tbody>
         </table>
       </div>
@@ -455,13 +456,13 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     <div class="card table-wrap">
       <table class="data">
         <thead><tr>
-          <th>Kickoff</th><th>League</th><th>Match</th><th>Pick</th><th>Type</th>
+          <th>Kickoff</th><th>League</th><th>Match</th><th>Bet</th>
           <th class="num">Odds</th><th class="num">Stake</th><th>Result</th><th class="num">Profit</th><th>Note</th><th></th>
         </tr></thead>
         <tbody id="mybetsRows"></tbody>
       </table>
     </div>
-    <p class="footnote">Profit is at your own stakes; for skipped picks, what they would have made. Your log is private: only you can see it.</p>
+    <p class="footnote">Profit is at your own stakes. A bet can be deleted only before its match kicks off. Your log is private: only you can see it.</p>
   </section>
 
   <nav class="league-tabs" id="leagueTabs" role="tablist" aria-label="League"></nav>
@@ -606,19 +607,14 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
 
 <dialog id="betDlg" class="dlg" aria-labelledby="betTitle">
   <form id="betForm" novalidate>
-    <div class="dlg-head"><h2 id="betTitle">Log a pick</h2><button type="button" class="dlg-x" data-close aria-label="Close">×</button></div>
+    <div class="dlg-head"><h2 id="betTitle">Log a bet</h2><button type="button" class="dlg-x" data-close aria-label="Close">×</button></div>
     <p class="dlg-msg" id="betMatch"></p>
     <fieldset class="fld"><legend>Outcome</legend><div class="choice" id="betOutcome"></div></fieldset>
-    <fieldset class="fld"><legend>What did you do?</legend>
-      <div class="choice">
-        <label><input type="radio" name="status" value="bet" checked> I bet on it</label>
-        <label><input type="radio" name="status" value="skip"> I looked into it and skipped it</label>
-      </div>
-    </fieldset>
     <div class="fld-row">
-      <label class="fld" id="betOddsLbl">Odds you got<input id="betOdds" type="number" step="0.01" min="1.01" inputmode="decimal" placeholder="e.g. 2.50" required autofocus></label>
-      <label class="fld" id="betStakeLbl">Stake<input id="betStake" type="number" step="0.01" min="0.01" value="1" inputmode="decimal" required></label>
+      <div class="fld">Bet365 odds<div class="odds-fixed" id="betOdds"></div></div>
+      <label class="fld">Stake<input id="betStake" type="number" step="0.01" min="0.01" value="1" inputmode="decimal" required autofocus></label>
     </div>
+    <p class="dlg-note">Your bet is logged at the Bet365 odds shown on this site right now, and scored at those odds. It can't be changed afterwards, and can be deleted only before kickoff.</p>
     <label class="fld">Note (optional)<textarea id="betNote" maxlength="300" rows="2" placeholder="e.g. checked team news, no key injuries"></textarea></label>
     <p class="dlg-err" id="betErr" role="alert"></p>
     <div class="dlg-actions"><button type="submit" class="btn primary">Save</button></div>
@@ -765,45 +761,43 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     if (!user) { openAuth("in", "Sign in to log your bets."); return; }
     const g = findGame(lid, home, away), L = leagueById(lid);
     if (!g) return;
+    if (!g.b365) { alert("Bet365 hasn't posted odds for this match yet, so it can't be logged."); return; }
     if (hasStarted(g)) { alert("This match has already kicked off, so it can't be logged any more."); return; }
-    const best = [0, 1, 2].reduce((a, i) => (g.b365 && g.p_model[i] * g.b365[i] > g.p_model[a] * g.b365[a] ? i : a), 0);
-    betCtx = { lid, L, g, oddsEdited: false };
+    const best = [0, 1, 2].reduce((a, i) => (g.p_model[i] * g.b365[i] > g.p_model[a] * g.b365[a] ? i : a), 0);
+    const pick = outcome || OUT[best];
+    betCtx = { lid, L, g };
     $("betMatch").textContent = `${L.name} · ${g.home} vs ${g.away} · ${g.kickoff_tbc ? `weekend of ${fmtDate(g.kickoff)}` : fmtKick(g.kickoff)}`;
-    $("betOutcome").innerHTML = OUT.map((o, i) => `<label><input type="radio" name="outcome" value="${o}"${(outcome || OUT[best]) === o ? " checked" : ""}>
-        ${esc(pickLabel(g.home, g.away, o))} <span class="dim">· model ${pct(g.p[i])}${g.b365 ? ` · Bet365 ${odd(g.b365[i])}` : ""}</span></label>`).join("");
+    $("betOutcome").innerHTML = OUT.map((o, i) => `<label><input type="radio" name="outcome" value="${o}"${pick === o ? " checked" : ""}>
+        ${esc(pickLabel(g.home, g.away, o))} <span class="dim">· Bet365 ${odd(g.b365[i])} · model ${pct(g.p[i])}</span></label>`).join("");
     $("betForm").reset();
-    $("betForm").querySelector(`input[name=outcome][value="${outcome || OUT[best]}"]`).checked = true;
+    $("betForm").querySelector(`input[name=outcome][value="${pick}"]`).checked = true;
     $("betErr").textContent = "";
-    syncBetForm(true);
+    syncBetForm();
     $("betDlg").showModal();
   }
-  function syncBetForm(resetOdds) {
-    const f = $("betForm"), i = OUT.indexOf(f.outcome.value), skip = f.status.value === "skip";
-    $("betOddsLbl").firstChild.textContent = skip ? "Odds on offer" : "Odds you got";
-    $("betStakeLbl").firstChild.textContent = skip ? "Stake you'd have used" : "Stake";
-    if (resetOdds || !betCtx.oddsEdited) $("betOdds").value = betCtx.g.b365 ? betCtx.g.b365[i] : "";
+  function syncBetForm() {
+    $("betOdds").textContent = odd(betCtx.g.b365[OUT.indexOf($("betForm").outcome.value)]);
   }
-  $("betForm").addEventListener("change", (e) => { if (e.target.name === "outcome" || e.target.name === "status") syncBetForm(false); });
-  $("betOdds").addEventListener("input", () => { betCtx.oddsEdited = true; });
+  $("betForm").addEventListener("change", (e) => { if (e.target.name === "outcome") syncBetForm(); });
   $("betForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = $("betForm"), err = $("betErr"), { lid, L, g } = betCtx;
-    const outcome = f.outcome.value, i = OUT.indexOf(outcome);
-    const odds = Number($("betOdds").value), stake = Number($("betStake").value);
-    if (!(odds > 1)) { err.textContent = "Enter the decimal odds, e.g. 2.50."; return; }
+    const outcome = f.outcome.value, i = OUT.indexOf(outcome), stake = Number($("betStake").value);
     if (!(stake > 0)) { err.textContent = "Enter a stake above 0."; return; }
     if (hasStarted(g)) { err.textContent = "This match has already kicked off."; return; }
+    // The database sets the odds, kickoff and model chance from the site's own data
+    // (supabase/locked_odds.sql); these values match what the page shows.
     const row = {
       league: lid, season: L.season, round: g.round, kickoff: g.kickoff_utc, home: g.home, away: g.away,
-      outcome, status: f.status.value, odds, stake,
-      model_chance: Math.round(g.p_model[i] * 1e4) / 1e4, bet365_odds: g.b365 ? g.b365[i] : null,
+      outcome, status: "bet", odds: g.b365[i], stake,
+      model_chance: Math.round(g.p_model[i] * 1e4) / 1e4, bet365_odds: g.b365[i],
       note: $("betNote").value.trim() || null,
     };
     f.querySelector("button[type=submit]").disabled = true;
     const { error } = await sb.from("bets").insert(row);
     f.querySelector("button[type=submit]").disabled = false;
     if (error) {
-      err.textContent = error.code === "23505" ? "You've already logged this outcome for this match." : `Couldn't save: ${error.message}`;
+      err.textContent = error.code === "23505" ? "You've already logged a bet on this outcome." : `Couldn't save: ${error.message}`;
       return;
     }
     $("betDlg").close();
@@ -894,27 +888,29 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       </tr>` : "");
   }
 
-  // ----- my page (#me): personal stats from the user's own picks + the site's match data -----
+  // ----- my page (#me): personal stats from the user's own bets + the site's match data -----
+  // Every bet is at the site's Bet365 odds (the database locks them: supabase/locked_odds.sql).
   let lastBoard = null;  // leaderboard rows, for the user's rank
   const fairChances = (o) => {
     if (!o || o.some((x) => x == null)) return null;
     const inv = o.map((x) => 1 / x), s = inv[0] + inv[1] + inv[2];
     return inv.map((x) => x / s);
   };
-  // Every logged pick with its result, flat-stake score and closing-line value once played.
+  // Every logged bet with its result and flat-stake score once played.
   function myPicks() {
-    return myBets.map((b) => {
+    return myBets.filter((b) => b.status === "bet").map((b) => {
       const L = leagueById(b.league), i = OUT.indexOf(b.outcome);
       const odds = Number(b.odds), stake = Number(b.stake);
       const m = L && L.season === b.season ? L.matches.find((x) => x.home === b.home && x.away === b.away) : null;
-      const onList = b.bet365_odds != null && b.model_chance != null && Number(b.model_chance) * Number(b.bet365_odds) - 1 >= 0.10;
-      const p = { b, i, odds, stake, m, onList, status: b.status };
+      const chance = b.model_chance == null ? null : Number(b.model_chance);
+      const p = { b, i, odds, stake, m, ev: chance == null ? null : chance * odds - 1 };
+      p.onList = p.ev != null && p.ev >= 0.10;
       if (m) {
         p.won = m.result === b.outcome;
         p.unit = p.won ? odds - 1 : -1;
         p.profit = p.won ? stake * (odds - 1) : -stake;
-        const c = fairChances(m.b365_close);
-        if (c) { p.closeChance = c[i]; p.clv = odds * c[i] - 1; p.beatClose = odds > m.b365_close[i]; }
+        const c = fairChances(m.b365);
+        if (c) p.marketChance = c[i];
       }
       return p;
     });
@@ -937,69 +933,57 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     }
     $("meBody").hidden = false;
     $("meTitle").textContent = (user.user_metadata && user.user_metadata.display_name) || "My page";
-    const picks = myPicks();
-    const bets = picks.filter((p) => p.status === "bet"), settled = bets.filter((p) => p.m);
-    const skipped = picks.filter((p) => p.status === "skip" && p.m);
-    const pending = bets.length - settled.length;
+    const bets = myPicks(), settled = bets.filter((p) => p.m), pending = bets.length - settled.length;
     const rec = unitRecord(settled);
     const staked = settled.reduce((a, p) => a + p.stake, 0), profit = settled.reduce((a, p) => a + p.profit, 0);
-    const withClose = settled.filter((p) => p.clv != null);
-    const avgClv = withClose.length ? withClose.reduce((a, p) => a + p.clv, 0) / withClose.length : null;
-    const beat = withClose.filter((p) => p.beatClose).length;
-    const expWins = withClose.reduce((a, p) => a + p.closeChance, 0);
+    const withMarket = settled.filter((p) => p.marketChance != null);
+    const expWins = withMarket.reduce((a, p) => a + p.marketChance, 0);
     const listed = unitRecord(settled.filter((p) => p.onList)), offList = unitRecord(settled.filter((p) => !p.onList));
-    const skip = unitRecord(skipped);
-    const first = picks.length ? picks.map((p) => p.b.kickoff.slice(0, 10)).sort()[0] : null;
+    const withEv = settled.filter((p) => p.ev != null);
+    const avgEv = withEv.length ? withEv.reduce((a, p) => a + p.ev, 0) / withEv.length : null;
+    const first = bets.length ? bets.map((p) => p.b.kickoff.slice(0, 10)).sort()[0] : null;
     const all = valuePicksSince(first);
     const meRow = lastBoard ? lastBoard.findIndex((r) => r.is_me) : -1;
 
-    $("meSub").textContent = `${settled.length} settled bet${settled.length === 1 ? "" : "s"}${pending ? `, ${pending} still to be played` : ""}${skipped.length ? `, ${skipped.length} settled skip${skipped.length === 1 ? "" : "s"}` : ""}. Scores count every bet as 1 unit, like the leaderboard.`;
+    $("meSub").textContent = `${settled.length} settled bet${settled.length === 1 ? "" : "s"}${pending ? `, ${pending} still to be played` : ""}. Every bet is at the Bet365 odds shown on this site when you logged it; scores count each bet as 1 unit, like the leaderboard.`;
     $("meTiles").innerHTML = [
       tile("Score", rec.n ? signed(rec.score) : "–", meRow >= 0 ? `Rank ${meRow + 1} of ${lastBoard.length} on the leaderboard` : "Not on the leaderboard yet"),
       tile("Return per bet", pctTxt(rec.roi), rec.n ? `${rec.won} of ${rec.n} won · average odds ${odd(settled.reduce((a, p) => a + p.odds, 0) / rec.n)}` : "No settled bets yet"),
       tile("Profit at your stakes", rec.n ? signed(profit) : "–", rec.n ? `on ${staked.toFixed(2)} staked (${pctTxt(staked ? profit / staked : null)})` : "No settled bets yet"),
-      tile("Wins vs the market's expectation", withClose.length ? `${rec.won} won` : "–", withClose.length ? `Bet365's closing odds expected ${expWins.toFixed(1)} of ${withClose.length}. More than expected = luck or skill; the closing-line value tells which.` : "Appears once a bet is settled"),
+      tile("Wins vs Bet365's odds", withMarket.length ? `${rec.won} won` : "–", withMarket.length ? `The odds you bet at implied ${expWins.toFixed(1)} wins from ${withMarket.length} bets. Winning more than the odds imply is how you profit.` : "Appears once a bet is settled"),
     ].join("");
 
     $("meSmart").innerHTML = [
-      tile("Closing-line value", pctTxt(avgClv), withClose.length
-        ? `Beat Bet365's closing odds on ${beat} of ${withClose.length} bets. Positive means you got better prices than the market's final view: the best early sign of real skill.`
-        : "How your odds compare with Bet365's at kickoff, once bets are settled"),
       tile("Your bets from the value list", pctTxt(listed.roi), listed.n
-        ? `${listed.n} bets the model rated 10%+ · vs ${pctTxt(all.roi)} for every value pick since your first pick (${all.n} picks). Beating the full list means your checks pick the better ones.`
+        ? `${listed.n} bets the model rated 10%+ · vs ${pctTxt(all.roi)} for every value pick since your first bet (${all.n} picks). Beating the full list means your checks pick the better ones.`
         : "Bets on outcomes the model rated at 10%+ expected value"),
       tile("Your other bets", pctTxt(offList.roi), offList.n ? `${offList.n} bets the model didn't flag as value` : "Bets outside the model's value list"),
-      tile("Picks you skipped", pctTxt(skip.roi), skip.n
-        ? `${skip.n} picks you looked into and passed on, ${skip.won} would have won. If your checks work, these should do worse than your bets.`
-        : "Log picks you look into and skip to test your checks"),
+      tile("Model's rating of your bets", pctTxt(avgEv), withEv.length
+        ? `The model's average expected value at the odds you took. Compare with your actual return (${pctTxt(rec.roi)}).`
+        : "The model's expected value of your bets at the odds you took"),
     ].join("");
 
     // Plain-language read of the numbers, careful about sample size.
     const says = [];
     if (!settled.length) says.push("No settled bets yet. Your stats fill in once the matches you've logged are played.");
     else {
-      if (settled.length < 30) says.push(`With ${settled.length} settled bet${settled.length === 1 ? "" : "s"}, the win/loss record is still mostly luck. Closing-line value is the earliest real signal.`);
-      if (avgClv != null) says.push(avgClv > 0.02
-        ? `You're beating Bet365's closing odds by ${pctTxt(avgClv)} on average: the market tends to move your way after you bet, which is what good picks look like.`
-        : avgClv < -0.02
-          ? `Bet365's closing odds were better than yours by ${pctTxt(-avgClv).replace("+", "")} on average: the market tends to move against your picks, which usually means it knew something you didn't.`
-          : "Your odds are about level with Bet365's closing odds, so no sign of an edge either way yet.");
+      if (settled.length < 30) says.push(`With ${settled.length} settled bet${settled.length === 1 ? "" : "s"}, results are still mostly luck: it takes a few hundred bets before skill and luck separate.`);
+      if (withMarket.length) says.push(rec.won > expWins
+        ? `You've won ${rec.won} bets where Bet365's odds implied ${expWins.toFixed(1)}: ahead of the odds so far.`
+        : `You've won ${rec.won} bets where Bet365's odds implied ${expWins.toFixed(1)}: not beating the odds so far.`);
       if (listed.n >= 3 && all.n) says.push(listed.roi > all.roi
         ? `Your bets from the value list are doing better than the whole list (${pctTxt(listed.roi)} vs ${pctTxt(all.roi)}): your checks are picking the better ones so far.`
         : `Your bets from the value list are doing no better than the whole list (${pctTxt(listed.roi)} vs ${pctTxt(all.roi)}): your checks aren't adding value yet.`);
-      if (skip.n >= 3 && rec.n) says.push(skip.roi < rec.roi
-        ? `The picks you skipped did worse than the ones you bet (${pctTxt(skip.roi)} vs ${pctTxt(rec.roi)}), so skipping them was the right call.`
-        : `The picks you skipped did at least as well as your bets (${pctTxt(skip.roi)} vs ${pctTxt(rec.roi)}), so skipping didn't help so far.`);
     }
     $("meVerdict").innerHTML = says.map((t) => `<p>${esc(t)}</p>`).join("");
 
     renderMeChart(settled);
     const bands = [[0, 2, "under 2"], [2, 3, "2–3"], [3, 5, "3–5"], [5, Infinity, "5+"]];
     $("meBands").innerHTML = bands.map(([lo, hi, label]) => {
-      const ps = settled.filter((p) => p.odds >= lo && p.odds < hi), r = unitRecord(ps), wc = ps.filter((p) => p.clv != null);
-      const clv = wc.length ? wc.reduce((a, p) => a + p.clv, 0) / wc.length : null;
-      return `<tr><td>${label}</td><td class="num">${r.n}</td><td class="num">${r.won}</td>
-        <td class="num">${r.n ? signed(r.score) : "–"}</td><td class="num">${pctTxt(r.roi)}</td><td class="num">${pctTxt(clv)}</td></tr>`;
+      const ps = settled.filter((p) => p.odds >= lo && p.odds < hi), r = unitRecord(ps);
+      const exp = ps.filter((p) => p.marketChance != null).reduce((a, p) => a + p.marketChance, 0);
+      return `<tr><td>${label}</td><td class="num">${r.n}</td><td class="num">${r.won}</td><td class="num">${r.n ? exp.toFixed(1) : "–"}</td>
+        <td class="num">${r.n ? signed(r.score) : "–"}</td><td class="num">${pctTxt(r.roi)}</td></tr>`;
     }).join("");
   }
 
@@ -1023,7 +1007,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     g += `<path class="line" stroke="var(--s1)" d="M${pts.map((d, k) => `${x(k)},${y(d.y)}`).join("L")}"/>`;
     g += pts.slice(1).map((d, k) => {
       const p = d.p, tip = tipAttr(`${p.b.home} – ${p.b.away} · ${fmtDate(p.b.kickoff.slice(0, 10))}`, [
-        ["Pick", pickLabel(p.b.home, p.b.away, p.b.outcome)], ["Odds", odd(p.odds)],
+        ["Bet", pickLabel(p.b.home, p.b.away, p.b.outcome)], ["Odds", odd(p.odds)],
         ["Result", `${p.won ? "Won" : "Lost"} ${p.m.score[0]}–${p.m.score[1]}`], ["Score after", signed(d.y)],
       ]);
       return `<circle class="dot" r="5" cx="${x(k + 1)}" cy="${y(d.y)}" fill="var(${p.won ? "--good" : "--bad"})" data-tip="${tip}"/>`;
@@ -1038,33 +1022,33 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
   function renderMyBets(problem = "") {
     $("mybets").hidden = !user;
     if (!user) return;
-    const rows = myBets.map((b) => ({ b, s: settle(b) }));
+    const rows = myBets.filter((b) => b.status === "bet").map((b) => ({ b, s: settle(b) }));
     const pending = rows.filter((r) => !r.s).length;
     $("mybetsSub").textContent = problem || (myBets.length
-      ? `${myBets.length} logged pick${myBets.length === 1 ? "" : "s"}${pending ? `, ${pending} still to be played` : ""}. Results fill in automatically once matches are played.`
-      : "Nothing logged yet. Use “Log a bet” on a match card or “Log” in the value table to record a pick you bet on or decided to skip.");
+      ? `${rows.length} bet${rows.length === 1 ? "" : "s"}${pending ? `, ${pending} still to be played` : ""}. Results fill in automatically once matches are played.`
+      : "Nothing logged yet. Use “Log a bet” on a match card or “Log” in the value table when you place a bet.");
     $("mybetsRows").innerHTML = rows.length ? rows.map(({ b, s }) => {
+      const open = new Date(b.kickoff).getTime() > Date.now();
       const L = leagueById(b.league), when = new Date(b.kickoff);
       const res = s ? `<span class="res ${s.won ? "W" : "L"}">${s.won ? "Won" : "Lost"} ${s.m.score[0]}–${s.m.score[1]}</span>` : `<span class="dim">Pending</span>`;
-      const profit = s ? `<span class="${b.status === "skip" ? "dim" : s.profit > 0 ? "up" : "down"}">${signed(s.profit)}</span>` : "–";
+      const profit = s ? `<span class="${s.profit > 0 ? "up" : "down"}">${signed(s.profit)}</span>` : "–";
       return `<tr>
         <td>${esc(DAY.format(when))}</td>
         <td>${esc(L ? L.name : b.league)}</td>
         <td>${esc(b.home)} – ${esc(b.away)}</td>
         <td class="outcome-cell">${esc(pickLabel(b.home, b.away, b.outcome))}</td>
-        <td><span class="tag ${b.status}">${b.status === "bet" ? "Bet" : "Skipped"}</span></td>
         <td class="num">${odd(b.odds)}</td>
         <td class="num">${Number(b.stake).toFixed(2)}</td>
         <td>${res}</td>
-        <td class="num" title="${b.status === "skip" ? "What it would have made" : ""}">${profit}</td>
+        <td class="num">${profit}</td>
         <td class="note-cell" title="${esc(b.note || "")}">${esc(b.note || "")}</td>
-        <td><button type="button" class="del-btn" data-del="${b.id}" aria-label="Delete this pick" title="Delete">×</button></td>
+        <td>${open ? `<button type="button" class="del-btn" data-del="${b.id}" aria-label="Delete this bet" title="Delete (until kickoff)">×</button>` : ""}</td>
       </tr>`;
-    }).join("") : `<tr><td colspan="11" class="dim">No picks logged yet.</td></tr>`;
+    }).join("") : `<tr><td colspan="10" class="dim">No bets logged yet.</td></tr>`;
   }
   $("mybetsRows").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-del]");
-    if (!b || !confirm("Delete this pick from your log?")) return;
+    if (!b || !confirm("Delete this bet from your log?")) return;
     const { error } = await sb.from("bets").delete().eq("id", b.dataset.del);
     if (error) alert(`Couldn't delete: ${error.message}`);
     await loadBets();
@@ -1166,7 +1150,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
         <details class="more"><summary>Expected goals ${g.xg[0]} – ${g.xg[1]} · likeliest scores</summary>
           <div class="scores">${g.scores.map((s) => `<span class="score-chip"><b>${esc(s.score)}</b> ${pct1(s.p)} · ${odd(s.odds)}</span>`).join("")}</div>
         </details>
-        ${sb && !hasStarted(g) ? `<div class="card-actions">${logButton(DATA.id, g.home, g.away, null, "Log a bet")}</div>` : ""}
+        ${sb && g.b365 && !hasStarted(g) ? `<div class="card-actions">${logButton(DATA.id, g.home, g.away, null, "Log a bet")}</div>` : ""}
       </article>`;
     }).join("");
   }

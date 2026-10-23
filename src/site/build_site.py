@@ -152,24 +152,7 @@ def next_round(log, fixtures, b365_odds):
     return {"round": int(rounds.idxmax()), "predicted_at": latest["run_timestamp"].iloc[0], "games": games}
 
 
-def closing_odds(league, season):
-    """{(home, away): [h, d, a] Bet365 closing odds} for the season's played matches
-    (football-data.co.uk's B365CH/CD/CA: the price at kickoff)."""
-    path = league.live_raw_file(season)
-    if not os.path.exists(path):
-        return {}
-    df = pd.read_csv(path)
-    if not {"B365CH", "B365CD", "B365CA"} <= set(df.columns):
-        return {}
-    out = {}
-    for _, r in df.iterrows():
-        odds = [num(r["B365C" + o], 2) for o in OUTCOMES]
-        if all(o is not None for o in odds):
-            out[(r["HomeTeam"], r["AwayTeam"])] = odds
-    return out
-
-
-def season_matches(league, fixtures, log, season):
+def season_matches(league, fixtures, log):
     """Every played match with the model's pre-match probabilities. Uses the
     latest live prediction logged before kickoff when there is one (a real
     forecast), otherwise the frozen-model backtest."""
@@ -187,7 +170,6 @@ def season_matches(league, fixtures, log, season):
         for r in lg.itertuples():
             live_fc[(r.home_team, r.away_team, r.round)] = [r.p_home, r.p_draw, r.p_away]
 
-    close = closing_odds(league, season)
     rows = []
     for r in bt.itertuples():
         key = (r.HomeTeam, r.AwayTeam, int(r.RoundNumber))
@@ -201,7 +183,6 @@ def season_matches(league, fixtures, log, season):
             "source": "live" if key in live_fc else "backtest",
             "p": [round(x, 4) for x in p], "odds": [priced_odds(x) for x in p],
             "b365": [num(x, 2) for x in b365],
-            "b365_close": close.get((r.HomeTeam, r.AwayTeam)),
             "pick": OUTCOMES[int(np.argmax(p))],
             "ll": {"model": -math.log(p[y]),
                    "b365": -math.log(b365_f[y]) if b365_f else None},
@@ -263,7 +244,7 @@ def league_data(league, all_odds):
         with open(league.status_json, encoding="utf-8") as f:
             status = json.load(f)
 
-    matches = season_matches(league, fixtures, log, season) if os.path.exists(league.live_season_file) else []
+    matches = season_matches(league, fixtures, log) if os.path.exists(league.live_season_file) else []
     return {
         "id": league.id,
         "name": league.name,

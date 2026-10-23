@@ -93,9 +93,8 @@ the site. `src/site/build_site.py` fills it with the data and writes the finishe
 
 ## Accounts and bet log
 
-Visitors can create an account on the page and log picks from the next-round cards and the value
-table -- bets they placed and picks they looked into and skipped. "My bets" settles them from the
-site's own results and compares the return with the skipped picks and with betting every value pick.
+Visitors can create an account on the page and log the bets they place from the next-round cards and
+the value table. Bets are settled from the site's own results.
 
 Accounts and the log live in Supabase (project `rstembhxuncyttzdmssl`); the site stays on GitHub
 Pages and talks to Supabase from the browser with the project's publishable key, which is meant to
@@ -116,10 +115,15 @@ be public. Supabase Auth stores passwords as bcrypt hashes. One-time setup in th
 The leaderboard (signed-in users only) ranks players by score: the profit if every bet had been 1
 unit, so stakes don't decide the ranking. Skipped picks don't count.
 
-"My page" (`#me`) shows a signed-in user's own stats: score and rank, return, profit at their
-stakes, wins against what Bet365's closing odds expected, closing-line value (their odds against
-Bet365's closing odds, from football-data.co.uk's `B365CH/CD/CA`), how their bets from the value list
-do against every value pick, skipped picks, score over time and a breakdown by odds.
+Logging a bet means it was placed at the Bet365 odds the site shows: the odds aren't typed in, and
+`supabase/locked_odds.sql` makes the database overwrite every new bet's odds with the site's own
+(uploaded to `match_odds` after each build by `src/site/sync_results.py`) and reject bets after
+kickoff; a bet can be deleted only before its match starts. Run that SQL once, after the other two.
+
+"My page" (`#me`) shows a signed-in user's own stats, all at the odds they bet at: score and rank,
+return, profit at their stakes, wins against what the odds implied, how their bets from the value
+list do against every value pick, the model's rating of their bets, score over time and a
+breakdown by odds.
 
 Preview locally: `python src/site/build_site.py`, then open `generated_site/index.html`
 (add `#bundesliga` to the address to open a specific league).
