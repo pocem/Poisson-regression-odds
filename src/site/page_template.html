@@ -257,6 +257,8 @@ footer p { margin: 6px 0; }
 .dlg-x { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
 .dlg-msg { margin: 0; color: var(--ink-2); font-size: 14px; }
 .dlg-err { margin: 0; color: var(--bad); font-size: 13.5px; }
+.dlg-note { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.dlg-note[hidden] { display: none; }
 .dlg-msg:empty, .dlg-err:empty { display: none; }
 .fld { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); border: 0; padding: 0; margin: 0; min-width: 0; }
 .fld[hidden] { display: none; }
@@ -541,6 +543,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     <label class="fld">Password<input id="authPw" type="password" autocomplete="current-password" required></label>
     <ul class="pw-rules" id="pwRules" hidden aria-label="Password requirements"></ul>
     <label class="fld" id="pw2Fld" hidden>Repeat password<input id="authPw2" type="password" autocomplete="new-password"></label>
+    <p class="dlg-note" id="authNote" hidden>Accounts are handled by Supabase. Your password is stored only as a salted bcrypt hash, never in plain text, and your bet log is private to you.</p>
     <p class="dlg-err" id="authErr" role="alert"></p>
     <div class="dlg-actions"><button type="submit" class="btn primary" id="authSubmit">Sign in</button></div>
   </form>
@@ -648,6 +651,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     $("nameFld").hidden = !up;
     $("pw2Fld").hidden = !up;
     $("pwRules").hidden = !up;
+    $("authNote").hidden = !up;
     $("authPw").autocomplete = up ? "new-password" : "current-password";
     $("authSubmit").textContent = up ? "Create account" : "Sign in";
     $("authErr").textContent = "";
