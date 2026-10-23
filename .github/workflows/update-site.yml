@@ -28,6 +28,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The branch tip, not the commit that triggered the run: runs queue one at a
+          # time, so a queued run then starts from the data the previous run pushed.
+          ref: ${{ github.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -67,7 +71,9 @@ jobs:
             echo "No data changes."
           else
             git commit -m "Update predictions and data ($(date -u +%Y-%m-%d))"
-            git pull --rebase
+            # Data files are regenerated every run, so on a clash keep this run's copy
+            # ("theirs" is the commit being replayed during a rebase).
+            git pull --rebase -X theirs
             git push
           fi
 
