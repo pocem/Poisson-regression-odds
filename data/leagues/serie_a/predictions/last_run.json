@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-23T21:11:40+00:00",
-  "status": "predicted",
-  "message": "Predicted 9 fixture(s) for round 8.",
-  "round": 8,
-  "forced": false,
-  "problems": []
+  "run_timestamp": "2026-10-24T09:53:29+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 1 played match(es): Torino v Monza (round 8)"
+  ]
 }
