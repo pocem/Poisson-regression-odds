@@ -1,5 +1,5 @@
 {
-  "run_timestamp": "2026-10-24T09:53:29+00:00",
+  "run_timestamp": "2026-10-25T10:14:53+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
