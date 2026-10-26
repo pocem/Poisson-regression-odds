@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-25T10:14:44+00:00",
+  "run_timestamp": "2026-10-26T10:57:26+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Ipswich v Nott'm Forest (round 8)"
+    "football-data.co.uk is missing 5 played match(es): Ipswich v Nott'm Forest (round 8), Aston Villa v Man City (round 8), Arsenal v Everton (round 8), Coventry v Fulham (round 8), Chelsea v Tottenham (round 8)"
   ]
 }

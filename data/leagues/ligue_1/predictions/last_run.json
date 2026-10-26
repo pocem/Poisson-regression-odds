@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-25T10:14:57+00:00",
+  "run_timestamp": "2026-10-26T10:57:36+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Brest v Nice (round 8)"
+    "football-data.co.uk is missing 2 played match(es): Brest v Nice (round 8), Lens v Paris FC (round 8)"
   ]
 }
