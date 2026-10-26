@@ -303,7 +303,7 @@ def value_outcomes(leagues, now, min_ev=MIN_EV):
                     "odds_b365": g["b365"][i], "odds_model": g["odds"][i],
                     "ev": round(g["p_model"][i] * g["b365"][i] - 1, 4),
                 })
-    return sorted((r for r in rows if r["ev"] >= min_ev), key=lambda r: (r["kickoff"], -r["ev"]))
+    return sorted((r for r in rows if r["ev"] >= min_ev), key=lambda r: (r["kickoff"][:10], r["kickoff_tbc"], r["kickoff"], -r["ev"]))  # a "time TBC" match goes last in its day
 
 
 def main():

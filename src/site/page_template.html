@@ -157,6 +157,7 @@ section { margin-top: 36px; }
 .summary-card { padding: 16px 18px; font-size: 15px; line-height: 1.6; }
 .summary-card p { margin: 0 0 10px; }
 .summary-card p:last-child { margin-bottom: 0; }
+.value-section tr.day-row td { padding: 14px 10px 6px; font-size: 13px; font-weight: 650; color: var(--ink); background: var(--surface-2); border-bottom: 1px solid var(--grid); }
 .value-section table.data td.outcome-cell { font-weight: 600; color: var(--ink); }
 .value-section a.league-link { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--axis); }
 .value-section a.league-link:hover { color: var(--ink); }
@@ -455,7 +456,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     <div class="card table-wrap">
       <table class="data">
         <thead><tr>
-          <th class="num">#</th><th>League</th><th>Kickoff</th><th>Match</th><th>Outcome</th>
+          <th class="num">#</th><th>League</th><th>Time</th><th>Match</th><th>Outcome</th>
           <th class="num">Model<br>chance</th><th class="num">Bet365<br>chance</th><th class="num">Difference</th>
           <th class="num">Bet365<br>odds</th><th class="num">Model<br>odds</th><th class="num">Expected<br>value</th><th></th>
         </tr></thead>
@@ -1575,10 +1576,16 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       return;
     }
     $("valueSub").textContent = `${rows.length} upcoming outcome${rows.length === 1 ? "" : "s"} with an expected value of 10% or more, earliest kickoff first.`;
+    // Rows come in kickoff order; a heading row starts each match day.
+    const LONG_DAY = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" });
+    let day = null;
     $("valueRows").innerHTML = rows.map((r, i) => {
-      const when = r.kickoff_tbc ? `Weekend of ${fmtDate(r.kickoff)}` : fmtKick(r.kickoff);
+      const d = r.kickoff.slice(0, 10);
+      const heading = d === day ? "" : `<tr class="day-row"><td colspan="12">${esc(LONG_DAY.format(parseUK(r.kickoff)))}</td></tr>`;
+      day = d;
+      const when = r.kickoff_tbc ? "kickoff TBC" : r.kickoff.slice(11, 16);
       const ev = r.ev * 100;
-      return `<tr>
+      return heading + `<tr>
         <td class="num dim">${i + 1}</td>
         <td><a class="league-link" href="#round/${esc(r.league_id)}">${esc(r.league)}</a></td>
         <td>${esc(when)}</td>
