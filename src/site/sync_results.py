@@ -36,7 +36,8 @@ def site_data():
 def result_rows(data):
     rows = []
     for lg in data["leagues"]:
-        for m in lg["matches"]:
+        # The fixture feed's results (up to date even while the model waits for data).
+        for m in lg.get("results") or lg["matches"]:
             rows.append({
                 "league": lg["id"], "season": lg["season"], "home": m["home"], "away": m["away"],
                 "kickoff": pd.Timestamp(m["kickoff"]).tz_localize("Europe/London").tz_convert("UTC").isoformat(),

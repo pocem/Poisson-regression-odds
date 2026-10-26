@@ -216,6 +216,18 @@ def summary(matches):
     }
 
 
+def feed_results(fixtures):
+    """Every played match in the fixture feed with its final score. Refreshed on every
+    run -- even while the model is waiting for its other data sources -- so logged bets
+    settle as soon as a match is over."""
+    out = []
+    for r in fixtures[fixtures["Played"]].itertuples():
+        h, a = int(r.HomeTeamScore), int(r.AwayTeamScore)
+        out.append({"round": int(r.RoundNumber), "kickoff": str(r.Kickoff), "home": r.HomeTeam, "away": r.AwayTeam,
+                    "score": [h, a], "result": "H" if h > a else "A" if h < a else "D"})
+    return out
+
+
 def elo_table(league, season, history_seasons):
     history = load_history_matches(league, history_seasons)
     live_path = league.live_raw_file(season)
@@ -255,6 +267,7 @@ def league_data(league, all_odds):
         "status": status,
         "next": next_round(log, fixtures, upcoming_bet365_odds(league, all_odds)),
         "matches": matches,
+        "results": feed_results(fixtures),
         "rounds": round_stats(matches) if matches else [],
         "summary": summary(matches) if matches else None,
         "elo": elo_table(league, season, history_seasons),

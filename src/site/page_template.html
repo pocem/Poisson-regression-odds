@@ -874,10 +874,16 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     renderMyBets(error ? `Couldn't load your bets: ${error.message}` : "");
     renderMyPage();
   }
-  // A logged pick's result, from the site's own played matches (null while it's pending).
+  // A played match's result for settling bets: the fixture feed's final score (available
+  // straight after the match), else the model's played-match data. null while it's pending.
+  function matchResult(L, season, home, away) {
+    if (!L || L.season !== season) return null;
+    const find = (list) => (list || []).find((x) => x.home === home && x.away === away);
+    return find(L.results) || find(L.matches) || null;
+  }
   function settle(b) {
     const L = leagueById(b.league);
-    const m = L && L.season === b.season ? L.matches.find((x) => x.home === b.home && x.away === b.away) : null;
+    const m = matchResult(L, b.season, b.home, b.away);
     if (!m) return null;
     const won = m.result === b.outcome, stake = Number(b.stake), odds = Number(b.odds);
     return { m, won, profit: won ? stake * (odds - 1) : -stake };
@@ -958,7 +964,9 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
     return myBets.filter((b) => b.status === "bet").map((b) => {
       const L = leagueById(b.league), i = OUT.indexOf(b.outcome);
       const odds = Number(b.odds), stake = Number(b.stake);
-      const m = L && L.season === b.season ? L.matches.find((x) => x.home === b.home && x.away === b.away) : null;
+      const m = matchResult(L, b.season, b.home, b.away);
+      // Bet365's three prices for the "wins the odds implied" figure come with the model's data.
+      const md = L ? L.matches.find((x) => x.home === b.home && x.away === b.away) : null;
       const chance = b.model_chance == null ? null : Number(b.model_chance);
       const p = { b, i, odds, stake, m, ev: chance == null ? null : chance * odds - 1 };
       p.onList = p.ev != null && p.ev >= 0.10;
@@ -966,7 +974,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
         p.won = m.result === b.outcome;
         p.unit = p.won ? odds - 1 : -1;
         p.profit = p.won ? stake * (odds - 1) : -stake;
-        const c = fairChances(m.b365);
+        const c = fairChances(md && md.b365);
         if (c) p.marketChance = c[i];
       }
       return p;
