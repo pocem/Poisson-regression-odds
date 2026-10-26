@@ -278,7 +278,7 @@ def value_outcomes(leagues, now, min_ev=MIN_EV):
     """Every outcome (home win / draw / away win) of every upcoming match with
     Bet365 odds whose expected value at those odds is at least min_ev,
         EV = model probability x Bet365 odds - 1,
-    highest EV first. Each row also carries the difference in chance
+    in kickoff order (earliest first; highest EV first within the same kickoff). Each row also carries the difference in chance
     (model chance - Bet365 chance, both as shown on the site)."""
     rows = []
     for lg in leagues:
@@ -303,7 +303,7 @@ def value_outcomes(leagues, now, min_ev=MIN_EV):
                     "odds_b365": g["b365"][i], "odds_model": g["odds"][i],
                     "ev": round(g["p_model"][i] * g["b365"][i] - 1, 4),
                 })
-    return sorted((r for r in rows if r["ev"] >= min_ev), key=lambda r: -r["ev"])
+    return sorted((r for r in rows if r["ev"] >= min_ev), key=lambda r: (r["kickoff"], -r["ev"]))
 
 
 def main():

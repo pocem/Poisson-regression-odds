@@ -431,7 +431,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       </div>
       <div>
         <h3>Compared with the market</h3>
-        <p>Next to every prediction are Bet365's real odds. Where the model rates an outcome clearly higher than the bookmaker, there could be value: the table below lists those disagreements, biggest expected value first.</p>
+        <p>Next to every prediction are Bet365's real odds. Where the model rates an outcome clearly higher than the bookmaker, there could be value: the table below lists those disagreements, earliest match first.</p>
       </div>
       <div>
         <h3>Track your bets</h3>
@@ -462,7 +462,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
         <tbody id="valueRows"></tbody>
       </table>
     </div>
-    <p class="footnote">Every upcoming outcome whose <b>expected value</b> is at least 10%, highest first. Expected value is the average return per unit staked at Bet365's odds <i>if the model is right</i>. <b>Difference</b> is the model's chance minus Bet365's, in percentage points (pts); <b>Bet365 chance</b> is 1 ÷ Bet365's odds. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
+    <p class="footnote">Every upcoming outcome whose <b>expected value</b> is at least 10%, in kickoff order: earliest match first. Expected value is the average return per unit staked at Bet365's odds <i>if the model is right</i>. <b>Difference</b> is the model's chance minus Bet365's, in percentage points (pts); <b>Bet365 chance</b> is 1 ÷ Bet365's odds. Over its test seasons the model is slightly less accurate than Bet365 overall, so treat these as disagreements worth a closer look, not betting tips.</p>
   </section>
 
   <section id="board" data-views="leaderboard" hidden>
@@ -1574,7 +1574,7 @@ td.note-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; colo
       $("valueRows").innerHTML = `<tr><td colspan="12" class="dim">Nothing to compare yet: Bet365 odds for the upcoming matches aren't posted (football-data.co.uk adds them on Tuesdays for midweek rounds and Fridays for weekend rounds), or no outcome reaches an expected value of 10%.</td></tr>`;
       return;
     }
-    $("valueSub").textContent = `${rows.length} upcoming outcome${rows.length === 1 ? "" : "s"} with an expected value of 10% or more, highest first.`;
+    $("valueSub").textContent = `${rows.length} upcoming outcome${rows.length === 1 ? "" : "s"} with an expected value of 10% or more, earliest kickoff first.`;
     $("valueRows").innerHTML = rows.map((r, i) => {
       const when = r.kickoff_tbc ? `Weekend of ${fmtDate(r.kickoff)}` : fmtKick(r.kickoff);
       const ev = r.ev * 100;
