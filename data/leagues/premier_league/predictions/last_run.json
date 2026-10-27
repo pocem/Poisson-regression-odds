@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-26T11:38:45+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
-  "problems": [
-    "football-data.co.uk is missing 5 played match(es): Ipswich v Nott'm Forest (round 8), Aston Villa v Man City (round 8), Arsenal v Everton (round 8), Coventry v Fulham (round 8), Chelsea v Tottenham (round 8)"
-  ]
+  "run_timestamp": "2026-10-27T10:58:01+00:00",
+  "status": "predicted",
+  "message": "Predicted 10 fixture(s) for round 9.",
+  "round": 9,
+  "forced": false,
+  "problems": []
 }

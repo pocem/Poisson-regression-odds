@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-26T11:38:50+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
-  "problems": [
-    "football-data.co.uk is missing 5 played match(es): Alaves v Malaga (round 10), Vallecano v Elche (round 10), Santander v Espanol (round 10), Valencia v Villarreal (round 10), Ath Madrid v La Coruna (round 10)"
-  ]
+  "run_timestamp": "2026-10-27T10:58:12+00:00",
+  "status": "predicted",
+  "message": "Predicted 10 fixture(s) for round 11.",
+  "round": 11,
+  "forced": false,
+  "problems": []
 }

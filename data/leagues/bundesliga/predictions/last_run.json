@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-26T11:38:47+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
-  "problems": [
-    "football-data.co.uk is missing 7 played match(es): Stuttgart v M'gladbach (round 7), Paderborn v Hamburg (round 7), FC Koln v Schalke 04 (round 7), Mainz v Werder Bremen (round 7), Augsburg v Union Berlin (round 7), RB Leipzig v Elversberg (round 7), Dortmund v Ein Frankfurt (round 7)"
-  ]
+  "run_timestamp": "2026-10-27T10:58:07+00:00",
+  "status": "predicted",
+  "message": "Predicted 9 fixture(s) for round 8.",
+  "round": 8,
+  "forced": false,
+  "problems": []
 }
