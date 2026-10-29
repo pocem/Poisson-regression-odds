@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-28T11:43:46+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
-  "problems": [
-    "football-data.co.uk is missing 3 played match(es): Sassuolo v Lazio (round 9), Roma v Cagliari (round 9), Torino v Como (round 9)"
-  ]
+  "run_timestamp": "2026-10-29T11:52:01+00:00",
+  "status": "predicted",
+  "message": "Predicted 2 fixture(s) for round 9.",
+  "round": 9,
+  "forced": false,
+  "problems": []
 }
