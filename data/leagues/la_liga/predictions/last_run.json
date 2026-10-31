@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-30T22:04:37+00:00",
-  "status": "unchanged",
-  "message": "Round 11 already predicted from the latest data.",
-  "round": 11
+  "run_timestamp": "2026-10-31T11:18:24+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 1 played match(es): Villarreal v Espanol (round 11)"
+  ]
 }
