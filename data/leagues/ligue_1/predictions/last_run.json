@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-31T11:18:33+00:00",
+  "run_timestamp": "2026-11-01T12:08:30+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 3 played match(es): Le Havre v Paris SG (round 9), Nice v Rennes (round 9), Lille v Lens (round 9)"
+    "football-data.co.uk is missing 4 played match(es): Le Havre v Paris SG (round 9), Nice v Rennes (round 9), Lille v Lens (round 9), Troyes v Le Mans (round 9)"
   ]
 }

@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-10-31T11:18:24+00:00",
+  "run_timestamp": "2026-11-01T12:08:24+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Villarreal v Espanol (round 11)"
+    "football-data.co.uk is missing 5 played match(es): Villarreal v Espanol (round 11), Levante v Ath Madrid (round 11), Vallecano v Celta (round 11), Betis v Malaga (round 11), Barcelona v Alaves (round 11)"
   ]
 }

@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-31T11:18:30+00:00",
-  "status": "unchanged",
-  "message": "Round 10 already predicted from the latest data.",
-  "round": 10
+  "run_timestamp": "2026-11-01T12:08:27+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 3 played match(es): Bologna v Monza (round 10), Udinese v Roma (round 10), Milan v Inter (round 10)"
+  ]
 }

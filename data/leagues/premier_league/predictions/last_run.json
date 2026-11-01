@@ -1,6 +1,8 @@
 {
-  "run_timestamp": "2026-10-31T11:18:17+00:00",
-  "status": "unchanged",
-  "message": "Round 9 already predicted from the latest data.",
-  "round": 9
+  "run_timestamp": "2026-11-01T12:08:17+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 8 played match(es): Chelsea v Man United (round 9), Bournemouth v Leeds (round 9), Brentford v Nott'm Forest (round 9), Coventry v Sunderland (round 9), Hull v Ipswich (round 9), Man City v Brighton (round 9), Tottenham v Crystal Palace (round 9), Aston Villa v Fulham (round 9)"
+  ]
 }
