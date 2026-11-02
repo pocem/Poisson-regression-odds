@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-11-01T12:08:24+00:00",
+  "run_timestamp": "2026-11-02T13:57:39+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 5 played match(es): Villarreal v Espanol (round 11), Levante v Ath Madrid (round 11), Vallecano v Celta (round 11), Betis v Malaga (round 11), Barcelona v Alaves (round 11)"
+    "Understat has no xG yet for 4 played match(es): Getafe v Sevilla (2026-11-01), Santander v Real Madrid (2026-11-01), Elche v Valencia (2026-11-01), Ath Bilbao v Sociedad (2026-11-01)"
   ]
 }

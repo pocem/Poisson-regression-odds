@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-11-01T12:08:21+00:00",
+  "run_timestamp": "2026-11-02T13:57:28+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 7 played match(es): Elversberg v Mainz (round 8), Schalke 04 v RB Leipzig (round 8), Werder Bremen v Hoffenheim (round 8), M'gladbach v Paderborn (round 8), Augsburg v Freiburg (round 8), Leverkusen v Stuttgart (round 8), Bayern Munich v Dortmund (round 8)"
+    "Understat has no xG yet for 2 played match(es): Union Berlin v FC Koln (2026-11-01), Ein Frankfurt v Hamburg (2026-11-01)"
   ]
 }
