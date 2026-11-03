@@ -25,7 +25,8 @@ Before predicting, every played match in the fixture feed must already be in
 football-data.co.uk (stats) and Understat (xG), and team names must line up
 across sources -- otherwise that league stops rather than predict from stale
 features (exit code 3 when running a single league). football-data usually
-lags results by a day or two.
+lags results by a day or two. A source that is only behind doesn't hold up the
+season's results: the played matches are still saved for the site's stats.
 
 Season rollover: once a season is finished, save its final football-data.co.uk
 file as data/leagues/<league>/raw/<season>.csv (e.g. 26-27.csv). The live season
@@ -109,8 +110,12 @@ def select_fixtures(fixtures, requested, now):
 
 
 def data_problems(league, fixtures, played, xg, history):
-    """Reasons the inputs aren't ready to predict from. Empty list = ready."""
-    problems = []
+    """Reasons the inputs aren't ready to predict from, as (mismatches, lagging).
+    Mismatches (team names, scores) mean the inputs disagree, so nothing built
+    from them can be trusted. Lagging means a source hasn't caught up with the
+    latest results: the played matches can still be saved, since a match's own
+    pre-match features never use its own stats, but the next round's would be stale."""
+    problems, lagging = [], []
     feed_teams = set(fixtures["HomeTeam"]) | set(fixtures["AwayTeam"])
     fd_teams = set() if played is None else set(played["HomeTeam"]) | set(played["AwayTeam"])
 
@@ -135,7 +140,7 @@ def data_problems(league, fixtures, played, xg, history):
     behind = [f"{r.HomeTeam} v {r.AwayTeam} (round {r.RoundNumber})"
               for r in feed_played.itertuples() if (r.HomeTeam, r.AwayTeam) not in fd_pairs]
     if behind:
-        problems.append(f"football-data.co.uk is missing {len(behind)} played match(es): {', '.join(behind)}")
+        lagging.append(f"football-data.co.uk is missing {len(behind)} played match(es): {', '.join(behind)}")
 
     if played is not None:
         dates = played["Date"].dt.strftime("%Y-%m-%d")
@@ -145,14 +150,14 @@ def data_problems(league, fixtures, played, xg, history):
                  if (r.HomeTeam, f"{r.Date:%Y-%m-%d}") not in xg_keys
                  or (r.AwayTeam, f"{r.Date:%Y-%m-%d}") not in xg_keys]
         if no_xg:
-            problems.append(f"Understat has no xG yet for {len(no_xg)} played match(es): {', '.join(no_xg)}")
+            lagging.append(f"Understat has no xG yet for {len(no_xg)} played match(es): {', '.join(no_xg)}")
 
         both = feed_played.merge(played, on=["HomeTeam", "AwayTeam"])
         bad = both[(both["HomeTeamScore"] != both["FTHG"]) | (both["AwayTeamScore"] != both["FTAG"])]
         for r in bad.itertuples():
             problems.append(f"score mismatch {r.HomeTeam} v {r.AwayTeam}: fixture feed "
                             f"{int(r.HomeTeamScore)}-{int(r.AwayTeamScore)}, football-data {int(r.FTHG)}-{int(r.FTAG)}")
-    return problems
+    return problems, lagging
 
 
 def training_history(league, train_seasons, history_seasons, elo_seeds):
@@ -285,14 +290,16 @@ def run_league(league, args):
     xg = fetch_understat(league, current_season)
     history = load_history_matches(league, history_seasons)
 
-    problems = data_problems(league, fixtures, played, xg, history)
+    mismatches, lagging = data_problems(league, fixtures, played, xg, history)
+    problems = mismatches + lagging
     if problems:
         print("\nData not ready:" + "".join(f"\n  - {p}" for p in problems))
-        if not args.force:
-            write_status(league, "not_ready", "Waiting for the data sources to catch up with the latest results.",
-                         problems=problems)
-            raise NotReady
-        print("  --force given: predicting anyway.")
+        if args.force:
+            print("  --force given: predicting anyway.")
+    if mismatches and not args.force:
+        write_status(league, "not_ready", "Waiting for the data sources to catch up with the latest results.",
+                     problems=problems)
+        raise NotReady
 
     round_no, upcoming = select_fixtures(fixtures, args.round, now)
 
@@ -307,6 +314,12 @@ def run_league(league, args):
     played_rows, predict_df = build_live_frames(league, history_seasons, current_season, played, upcoming_fx, elo_seeds)
     if played is not None:
         save_live_season(league, played_rows, current_season)
+
+    # The season's results are saved either way; only predicting waits for the sources.
+    if lagging and not args.force:
+        write_status(league, "not_ready", "Waiting for the data sources to catch up with the latest results.",
+                     problems=problems)
+        raise NotReady
 
     if round_no is None:
         print("No upcoming fixtures -- season finished.")
