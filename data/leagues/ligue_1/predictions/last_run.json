@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-11-02T13:58:03+00:00",
+  "run_timestamp": "2026-11-03T12:10:03+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "Understat has no xG yet for 4 played match(es): Strasbourg v Auxerre (2026-11-01), Lyon v Angers (2026-11-01), Paris FC v Monaco (2026-11-01), Marseille v Toulouse (2026-11-01)"
+    "Understat has no xG yet for 5 played match(es): Strasbourg v Auxerre (2026-11-01), Lyon v Angers (2026-11-01), Paris FC v Monaco (2026-11-01), Marseille v Toulouse (2026-11-01), Lorient v Brest (2026-11-02)"
   ]
 }

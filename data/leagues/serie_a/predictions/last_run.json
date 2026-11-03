@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-11-02T13:57:51+00:00",
+  "run_timestamp": "2026-11-03T12:09:30+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "Understat has no xG yet for 5 played match(es): Como v Venezia (2026-11-01), Frosinone v Torino (2026-11-01), Lazio v Cagliari (2026-11-01), Lecce v Genoa (2026-11-01), Juventus v Napoli (2026-11-01)"
+    "Understat has no xG yet for 7 played match(es): Como v Venezia (2026-11-01), Frosinone v Torino (2026-11-01), Lazio v Cagliari (2026-11-01), Lecce v Genoa (2026-11-01), Juventus v Napoli (2026-11-01), Sassuolo v Fiorentina (2026-11-02), Atalanta v Parma (2026-11-02)"
   ]
 }

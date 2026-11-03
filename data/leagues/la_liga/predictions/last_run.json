@@ -1,8 +1,8 @@
 {
-  "run_timestamp": "2026-11-02T13:57:39+00:00",
+  "run_timestamp": "2026-11-03T12:08:58+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "Understat has no xG yet for 4 played match(es): Getafe v Sevilla (2026-11-01), Santander v Real Madrid (2026-11-01), Elche v Valencia (2026-11-01), Ath Bilbao v Sociedad (2026-11-01)"
+    "Understat has no xG yet for 5 played match(es): Getafe v Sevilla (2026-11-01), Santander v Real Madrid (2026-11-01), Elche v Valencia (2026-11-01), Ath Bilbao v Sociedad (2026-11-01), La Coruna v Osasuna (2026-11-02)"
   ]
 }
