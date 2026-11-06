@@ -1,7 +1,9 @@
 {
-  "run_timestamp": "2026-11-06T16:27:26+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
+  "run_timestamp": "2026-11-06T17:26:01+00:00",
+  "status": "predicted",
+  "message": "Predicted 10 fixture(s) for round 11. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 11,
+  "forced": true,
   "problems": [
     "Understat has no xG yet for 7 played match(es): Como v Venezia (2026-11-01), Frosinone v Torino (2026-11-01), Lazio v Cagliari (2026-11-01), Lecce v Genoa (2026-11-01), Juventus v Napoli (2026-11-01), Sassuolo v Fiorentina (2026-11-02), Atalanta v Parma (2026-11-02)"
   ]

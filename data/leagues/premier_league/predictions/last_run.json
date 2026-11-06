@@ -1,7 +1,9 @@
 {
-  "run_timestamp": "2026-11-06T16:27:14+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
+  "run_timestamp": "2026-11-06T17:25:45+00:00",
+  "status": "predicted",
+  "message": "Predicted 10 fixture(s) for round 10. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 10,
+  "forced": true,
   "problems": [
     "Understat has no xG yet for 2 played match(es): Liverpool v Arsenal (2026-11-01), Newcastle v Everton (2026-11-02)"
   ]
