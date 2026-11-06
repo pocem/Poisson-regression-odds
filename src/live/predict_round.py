@@ -26,7 +26,9 @@ football-data.co.uk (stats) and Understat (xG), and team names must line up
 across sources -- otherwise that league stops rather than predict from stale
 features (exit code 3 when running a single league). football-data usually
 lags results by a day or two. A source that is only behind doesn't hold up the
-season's results: the played matches are still saved for the site's stats.
+season's results: the played matches are still saved for the site's stats. If
+Understat is the only source behind and has been for XG_GRACE_DAYS, the round is
+predicted anyway, without the missing xG.
 
 Season rollover: once a season is finished, save its final football-data.co.uk
 file as data/leagues/<league>/raw/<season>.csv (e.g. 26-27.csv). The live season
@@ -67,6 +69,7 @@ WINDOW = 3
 MAX_GOALS_GRID = 6
 NOT_READY_EXIT = 3  # distinct from a crash (1), so automation can treat "wait for data" as normal
 REARRANGED_DAYS = 5  # a round's games span Fri-Mon; further out = rearranged
+XG_GRACE_DAYS = 2  # Understat normally has xG within hours; this far behind, predict without it
 
 
 class NotReady(Exception):
@@ -110,12 +113,14 @@ def select_fixtures(fixtures, requested, now):
 
 
 def data_problems(league, fixtures, played, xg, history):
-    """Reasons the inputs aren't ready to predict from, as (mismatches, lagging).
-    Mismatches (team names, scores) mean the inputs disagree, so nothing built
-    from them can be trusted. Lagging means a source hasn't caught up with the
-    latest results: the played matches can still be saved, since a match's own
-    pre-match features never use its own stats, but the next round's would be stale."""
-    problems, lagging = [], []
+    """Reasons the inputs aren't ready to predict from, as (mismatches, lagging,
+    xg_missing_since). Mismatches (team names, scores) mean the inputs disagree, so
+    nothing built from them can be trusted. Lagging means a source hasn't caught up
+    with the latest results: the played matches can still be saved, since a match's
+    own pre-match features never use its own stats, but the next round's would be
+    stale. xg_missing_since is the date of the oldest played match Understat has
+    no xG for (None when it has them all)."""
+    problems, lagging, xg_missing_since = [], [], None
     feed_teams = set(fixtures["HomeTeam"]) | set(fixtures["AwayTeam"])
     fd_teams = set() if played is None else set(played["HomeTeam"]) | set(played["AwayTeam"])
 
@@ -146,18 +151,20 @@ def data_problems(league, fixtures, played, xg, history):
         dates = played["Date"].dt.strftime("%Y-%m-%d")
         xg = align_xg_dates(xg, list(zip(played["HomeTeam"], dates)) + list(zip(played["AwayTeam"], dates)))
         xg_keys = set(zip(xg["Team"], xg["Date_str"]))
-        no_xg = [f"{r.HomeTeam} v {r.AwayTeam} ({r.Date:%Y-%m-%d})" for r in played.itertuples()
+        no_xg = [r for r in played.itertuples()
                  if (r.HomeTeam, f"{r.Date:%Y-%m-%d}") not in xg_keys
                  or (r.AwayTeam, f"{r.Date:%Y-%m-%d}") not in xg_keys]
         if no_xg:
-            lagging.append(f"Understat has no xG yet for {len(no_xg)} played match(es): {', '.join(no_xg)}")
+            lagging.append(f"Understat has no xG yet for {len(no_xg)} played match(es): "
+                           + ", ".join(f"{r.HomeTeam} v {r.AwayTeam} ({r.Date:%Y-%m-%d})" for r in no_xg))
+            xg_missing_since = min(r.Date for r in no_xg)
 
         both = feed_played.merge(played, on=["HomeTeam", "AwayTeam"])
         bad = both[(both["HomeTeamScore"] != both["FTHG"]) | (both["AwayTeamScore"] != both["FTAG"])]
         for r in bad.itertuples():
             problems.append(f"score mismatch {r.HomeTeam} v {r.AwayTeam}: fixture feed "
                             f"{int(r.HomeTeamScore)}-{int(r.AwayTeamScore)}, football-data {int(r.FTHG)}-{int(r.FTAG)}")
-    return problems, lagging
+    return problems, lagging, xg_missing_since
 
 
 def training_history(league, train_seasons, history_seasons, elo_seeds):
@@ -290,7 +297,7 @@ def run_league(league, args):
     xg = fetch_understat(league, current_season)
     history = load_history_matches(league, history_seasons)
 
-    mismatches, lagging = data_problems(league, fixtures, played, xg, history)
+    mismatches, lagging, xg_missing_since = data_problems(league, fixtures, played, xg, history)
     problems = mismatches + lagging
     if problems:
         print("\nData not ready:" + "".join(f"\n  - {p}" for p in problems))
@@ -316,7 +323,17 @@ def run_league(league, args):
         save_live_season(league, played_rows, current_season)
 
     # The season's results are saved either way; only predicting waits for the sources.
-    if lagging and not args.force:
+    # Understat alone being stuck for days doesn't hold the round up any longer: those
+    # matches just don't count towards the teams' rolling xG until it catches up.
+    note = ""
+    xg_given_up = (xg_missing_since is not None and len(lagging) == 1
+                   and (now.normalize() - xg_missing_since).days >= XG_GRACE_DAYS)
+    if xg_given_up:
+        note = (f" Understat {'is unavailable and ' if xg.attrs.get('unreachable') else ''}"
+                f"has no xG for matches since {xg_missing_since.day} {xg_missing_since:%b}, "
+                f"so the predictions leave it out until it catches up.")
+        print(f"  Understat has been behind for {XG_GRACE_DAYS}+ days: predicting without the missing xG.")
+    elif lagging and not args.force:
         write_status(league, "not_ready", "Waiting for the data sources to catch up with the latest results.",
                      problems=problems)
         raise NotReady
@@ -338,7 +355,8 @@ def run_league(league, args):
     signature = input_signature(league, played, xg) + "-" + model_meta["training_fingerprint"][:6]
     if args.skip_if_unchanged and already_predicted(league, upcoming, signature):
         print(f"Round {round_no} already predicted from these exact inputs -- nothing new to log.")
-        write_status(league, "unchanged", f"Round {round_no} already predicted from the latest data.", round=round_no)
+        write_status(league, "unchanged", f"Round {round_no} already predicted from the latest data.{note}",
+                     round=round_no)
         return
     extra = upcoming[upcoming["RoundNumber"] != round_no]
     if not extra.empty:
@@ -389,7 +407,7 @@ def run_league(league, args):
     else:
         log_df.to_csv(log_csv, mode="a", header=not os.path.exists(log_csv), index=False)
     print(f"\nAppended {len(log_df)} predictions to {rel(log_csv)}")
-    write_status(league, "predicted", f"Predicted {len(log_df)} fixture(s) for round {round_no}.",
+    write_status(league, "predicted", f"Predicted {len(log_df)} fixture(s) for round {round_no}.{note}",
                  round=round_no, forced=bool(problems), problems=problems)
 
     print(f"\n=== {league.name} round {round_no} ===")

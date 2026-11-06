@@ -175,22 +175,28 @@ def download_understat(league, year):
 def fetch_understat(league, season):
     """Refreshes the live season's Understat cache. Returns DataFrame[Team,
     Date_str] of every team-match Understat has xG for (canonical names), so
-    the caller can check it's up to date."""
+    the caller can check it's up to date. attrs["unreachable"] is True when
+    Understat couldn't be downloaded (down, or serving a maintenance page)."""
     year = season_start_year(season)
     cache_path = league.understat_cache(year)
+    unreachable = False
     try:
         data = download_understat(league, year)
     except (requests.RequestException, ValueError) as e:
+        unreachable = True
         if not os.path.exists(cache_path):
             print(f"  WARNING: Understat unreachable ({e}) and no cache -- live-season xG will be missing")
-            return pd.DataFrame(columns=["Team", "Date_str"])
-        print(f"  WARNING: Understat unreachable ({e}); using cached {cache_path}")
-        with open(cache_path, encoding="utf-8") as f:
-            data = json.load(f)
+            data = {"teams": {}}
+        else:
+            print(f"  WARNING: Understat unreachable ({e}); using cached {cache_path}")
+            with open(cache_path, encoding="utf-8") as f:
+                data = json.load(f)
 
     rows = understat_rows(league, data)
     print(f"  Understat: xG for {len(rows) // 2} played matches")
-    return pd.DataFrame(rows, columns=["Team", "Date_str"])
+    out = pd.DataFrame(rows, columns=["Team", "Date_str"])
+    out.attrs["unreachable"] = unreachable
+    return out
 
 
 def _fetch_clubelo_day(league, date_str):
