@@ -1,10 +1,6 @@
 {
-  "run_timestamp": "2026-11-06T17:25:50+00:00",
-  "status": "predicted",
-  "message": "Predicted 9 fixture(s) for round 9. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
-  "round": 9,
-  "forced": true,
-  "problems": [
-    "Understat has no xG yet for 2 played match(es): Union Berlin v FC Koln (2026-11-01), Ein Frankfurt v Hamburg (2026-11-01)"
-  ]
+  "run_timestamp": "2026-11-06T22:53:26+00:00",
+  "status": "unchanged",
+  "message": "Round 9 already predicted from the latest data. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 9
 }
