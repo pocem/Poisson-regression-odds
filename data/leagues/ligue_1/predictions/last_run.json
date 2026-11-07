@@ -1,6 +1,9 @@
 {
-  "run_timestamp": "2026-11-06T22:53:40+00:00",
-  "status": "unchanged",
-  "message": "Round 10 already predicted from the latest data. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
-  "round": 10
+  "run_timestamp": "2026-11-07T11:59:20+00:00",
+  "status": "not_ready",
+  "message": "Waiting for the data sources to catch up with the latest results.",
+  "problems": [
+    "football-data.co.uk is missing 1 played match(es): Toulouse v Strasbourg (round 10)",
+    "Understat has no xG yet for 5 played match(es): Strasbourg v Auxerre (2026-11-01), Lyon v Angers (2026-11-01), Paris FC v Monaco (2026-11-01), Marseille v Toulouse (2026-11-01), Lorient v Brest (2026-11-02)"
+  ]
 }
