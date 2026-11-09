@@ -1,9 +1,10 @@
 {
-  "run_timestamp": "2026-11-08T12:18:42+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
+  "run_timestamp": "2026-11-09T14:29:10+00:00",
+  "status": "predicted",
+  "message": "Predicted 10 fixture(s) for round 11. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 11,
+  "forced": true,
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Everton v Coventry (round 10)",
-    "Understat has no xG yet for 2 played match(es): Liverpool v Arsenal (2026-11-01), Newcastle v Everton (2026-11-02)"
+    "Understat has no xG yet for 12 played match(es): Liverpool v Arsenal (2026-11-01), Newcastle v Everton (2026-11-02), Everton v Coventry (2026-11-06), Leeds v Tottenham (2026-11-07), Arsenal v Hull (2026-11-07), Fulham v Newcastle (2026-11-07), Nott'm Forest v Man City (2026-11-07), Brighton v Brentford (2026-11-08), Crystal Palace v Liverpool (2026-11-08), Ipswich v Bournemouth (2026-11-08), Sunderland v Chelsea (2026-11-08), Man United v Aston Villa (2026-11-08)"
   ]
 }

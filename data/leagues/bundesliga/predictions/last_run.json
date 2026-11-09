@@ -1,9 +1,10 @@
 {
-  "run_timestamp": "2026-11-08T12:19:07+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
+  "run_timestamp": "2026-11-09T14:29:14+00:00",
+  "status": "predicted",
+  "message": "Predicted 9 fixture(s) for round 10. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 10,
+  "forced": true,
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Hamburg v M'gladbach (round 9)",
-    "Understat has no xG yet for 2 played match(es): Union Berlin v FC Koln (2026-11-01), Ein Frankfurt v Hamburg (2026-11-01)"
+    "Understat has no xG yet for 11 played match(es): Union Berlin v FC Koln (2026-11-01), Ein Frankfurt v Hamburg (2026-11-01), Hamburg v M'gladbach (2026-11-06), Dortmund v Elversberg (2026-11-07), Mainz v Bayern Munich (2026-11-07), Paderborn v Ein Frankfurt (2026-11-07), RB Leipzig v Augsburg (2026-11-07), Stuttgart v Werder Bremen (2026-11-07), FC Koln v Leverkusen (2026-11-08), Freiburg v Union Berlin (2026-11-08), Hoffenheim v Schalke 04 (2026-11-08)"
   ]
 }

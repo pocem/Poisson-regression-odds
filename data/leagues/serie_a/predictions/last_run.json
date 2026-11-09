@@ -1,9 +1,10 @@
 {
-  "run_timestamp": "2026-11-08T12:19:32+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
+  "run_timestamp": "2026-11-09T14:29:25+00:00",
+  "status": "predicted",
+  "message": "Predicted 10 fixture(s) for round 12. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 12,
+  "forced": true,
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Venezia v Udinese (round 11)",
-    "Understat has no xG yet for 7 played match(es): Como v Venezia (2026-11-01), Frosinone v Torino (2026-11-01), Lazio v Cagliari (2026-11-01), Lecce v Genoa (2026-11-01), Juventus v Napoli (2026-11-01), Sassuolo v Fiorentina (2026-11-02), Atalanta v Parma (2026-11-02)"
+    "Understat has no xG yet for 17 played match(es): Como v Venezia (2026-11-01), Frosinone v Torino (2026-11-01), Lazio v Cagliari (2026-11-01), Lecce v Genoa (2026-11-01), Juventus v Napoli (2026-11-01), Sassuolo v Fiorentina (2026-11-02), Atalanta v Parma (2026-11-02), Venezia v Udinese (2026-11-06), Cagliari v Frosinone (2026-11-07), Torino v Lecce (2026-11-07), Parma v Bologna (2026-11-07), Roma v Sassuolo (2026-11-07), Napoli v Lazio (2026-11-08), Genoa v Milan (2026-11-08), Monza v Atalanta (2026-11-08), Inter v Como (2026-11-08), Fiorentina v Juventus (2026-11-08)"
   ]
 }
