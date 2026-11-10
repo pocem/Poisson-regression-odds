@@ -1,10 +1,6 @@
 {
-  "run_timestamp": "2026-11-09T14:29:31+00:00",
-  "status": "predicted",
-  "message": "Predicted 9 fixture(s) for round 11. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
-  "round": 11,
-  "forced": true,
-  "problems": [
-    "Understat has no xG yet for 14 played match(es): Strasbourg v Auxerre (2026-11-01), Lyon v Angers (2026-11-01), Paris FC v Monaco (2026-11-01), Marseille v Toulouse (2026-11-01), Lorient v Brest (2026-11-02), Toulouse v Strasbourg (2026-11-06), Auxerre v Paris FC (2026-11-07), Paris SG v Troyes (2026-11-07), Rennes v Lille (2026-11-08), Angers v Nice (2026-11-08), Brest v Lyon (2026-11-08), Le Havre v Lorient (2026-11-08), Le Mans v Monaco (2026-11-08), Lens v Marseille (2026-11-08)"
-  ]
+  "run_timestamp": "2026-11-10T13:51:17+00:00",
+  "status": "unchanged",
+  "message": "Round 11 already predicted from the latest data. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 11
 }

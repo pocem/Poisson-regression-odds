@@ -1,10 +1,6 @@
 {
-  "run_timestamp": "2026-11-09T14:29:19+00:00",
-  "status": "predicted",
-  "message": "Predicted 10 fixture(s) for round 13. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
-  "round": 13,
-  "forced": true,
-  "problems": [
-    "Understat has no xG yet for 15 played match(es): Getafe v Sevilla (2026-11-01), Santander v Real Madrid (2026-11-01), Elche v Valencia (2026-11-01), Ath Bilbao v Sociedad (2026-11-01), La Coruna v Osasuna (2026-11-02), Sevilla v Alaves (2026-11-06), Malaga v Santander (2026-11-07), Espanol v La Coruna (2026-11-07), Osasuna v Ath Bilbao (2026-11-07), Valencia v Real Madrid (2026-11-07), Elche v Betis (2026-11-08), Sociedad v Vallecano (2026-11-08), Celta v Levante (2026-11-08), Villarreal v Getafe (2026-11-08), Ath Madrid v Barcelona (2026-11-08)"
-  ]
+  "run_timestamp": "2026-11-10T13:51:10+00:00",
+  "status": "unchanged",
+  "message": "Round 13 already predicted from the latest data. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 13
 }
