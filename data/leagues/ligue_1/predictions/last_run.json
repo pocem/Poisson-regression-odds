@@ -1,9 +1,9 @@
 {
-  "run_timestamp": "2026-11-21T13:47:42+00:00",
+  "run_timestamp": "2026-11-22T13:40:57+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Troyes v Le Havre (round 11)",
+    "football-data.co.uk is missing 6 played match(es): Troyes v Le Havre (round 11), Nice v Paris SG (round 11), Lens v Toulouse (round 11), Lille v Lyon (round 11), Monaco v Auxerre (round 11), Strasbourg v Brest (round 11)",
     "Understat has no xG yet for 14 played match(es): Strasbourg v Auxerre (2026-11-01), Lyon v Angers (2026-11-01), Paris FC v Monaco (2026-11-01), Marseille v Toulouse (2026-11-01), Lorient v Brest (2026-11-02), Toulouse v Strasbourg (2026-11-06), Auxerre v Paris FC (2026-11-07), Paris SG v Troyes (2026-11-07), Rennes v Lille (2026-11-08), Angers v Nice (2026-11-08), Brest v Lyon (2026-11-08), Le Havre v Lorient (2026-11-08), Le Mans v Monaco (2026-11-08), Lens v Marseille (2026-11-08)"
   ]
 }

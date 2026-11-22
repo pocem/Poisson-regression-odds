@@ -1,9 +1,9 @@
 {
-  "run_timestamp": "2026-11-21T13:47:29+00:00",
+  "run_timestamp": "2026-11-22T13:40:41+00:00",
   "status": "not_ready",
   "message": "Waiting for the data sources to catch up with the latest results.",
   "problems": [
-    "football-data.co.uk is missing 1 played match(es): Bayern Munich v FC Koln (round 10)",
+    "football-data.co.uk is missing 7 played match(es): Bayern Munich v FC Koln (round 10), Elversberg v Freiburg (round 10), M'gladbach v Dortmund (round 10), Union Berlin v RB Leipzig (round 10), Ein Frankfurt v Hoffenheim (round 10), Leverkusen v Paderborn (round 10), Schalke 04 v Stuttgart (round 10)",
     "Understat has no xG yet for 11 played match(es): Union Berlin v FC Koln (2026-11-01), Ein Frankfurt v Hamburg (2026-11-01), Hamburg v M'gladbach (2026-11-06), Dortmund v Elversberg (2026-11-07), Mainz v Bayern Munich (2026-11-07), Paderborn v Ein Frankfurt (2026-11-07), RB Leipzig v Augsburg (2026-11-07), Stuttgart v Werder Bremen (2026-11-07), FC Koln v Leverkusen (2026-11-08), Freiburg v Union Berlin (2026-11-08), Hoffenheim v Schalke 04 (2026-11-08)"
   ]
 }
