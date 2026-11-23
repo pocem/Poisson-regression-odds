@@ -1,9 +1,10 @@
 {
-  "run_timestamp": "2026-11-22T13:40:47+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
+  "run_timestamp": "2026-11-23T16:37:21+00:00",
+  "status": "predicted",
+  "message": "Predicted 1 fixture(s) for round 13. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 13,
+  "forced": true,
   "problems": [
-    "football-data.co.uk is missing 5 played match(es): Ath Bilbao v Espanol (round 13), Alaves v La Coruna (round 13), Vallecano v Valencia (round 13), Sevilla v Betis (round 13), Real Madrid v Celta (round 13)",
-    "Understat has no xG yet for 15 played match(es): Getafe v Sevilla (2026-11-01), Santander v Real Madrid (2026-11-01), Elche v Valencia (2026-11-01), Ath Bilbao v Sociedad (2026-11-01), La Coruna v Osasuna (2026-11-02), Sevilla v Alaves (2026-11-06), Malaga v Santander (2026-11-07), Espanol v La Coruna (2026-11-07), Osasuna v Ath Bilbao (2026-11-07), Valencia v Real Madrid (2026-11-07), Elche v Betis (2026-11-08), Sociedad v Vallecano (2026-11-08), Celta v Levante (2026-11-08), Villarreal v Getafe (2026-11-08), Ath Madrid v Barcelona (2026-11-08)"
+    "Understat has no xG yet for 24 played match(es): Getafe v Sevilla (2026-11-01), Santander v Real Madrid (2026-11-01), Elche v Valencia (2026-11-01), Ath Bilbao v Sociedad (2026-11-01), La Coruna v Osasuna (2026-11-02), Sevilla v Alaves (2026-11-06), Malaga v Santander (2026-11-07), Espanol v La Coruna (2026-11-07), Osasuna v Ath Bilbao (2026-11-07), Valencia v Real Madrid (2026-11-07), Elche v Betis (2026-11-08), Sociedad v Vallecano (2026-11-08), Celta v Levante (2026-11-08), Villarreal v Getafe (2026-11-08), Ath Madrid v Barcelona (2026-11-08), Ath Bilbao v Espanol (2026-11-20), Alaves v La Coruna (2026-11-21), Vallecano v Valencia (2026-11-21), Sevilla v Betis (2026-11-21), Real Madrid v Celta (2026-11-21), Barcelona v Villarreal (2026-11-22), Santander v Sociedad (2026-11-22), Osasuna v Malaga (2026-11-22), Getafe v Ath Madrid (2026-11-22)"
   ]
 }

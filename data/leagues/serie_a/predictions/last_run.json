@@ -1,9 +1,10 @@
 {
-  "run_timestamp": "2026-11-22T13:40:52+00:00",
-  "status": "not_ready",
-  "message": "Waiting for the data sources to catch up with the latest results.",
+  "run_timestamp": "2026-11-23T16:37:26+00:00",
+  "status": "predicted",
+  "message": "Predicted 1 fixture(s) for round 12. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 12,
+  "forced": true,
   "problems": [
-    "football-data.co.uk is missing 4 played match(es): Como v Cagliari (round 12), Lazio v Lecce (round 12), Parma v Roma (round 12), Napoli v Torino (round 12)",
-    "Understat has no xG yet for 17 played match(es): Como v Venezia (2026-11-01), Frosinone v Torino (2026-11-01), Lazio v Cagliari (2026-11-01), Lecce v Genoa (2026-11-01), Juventus v Napoli (2026-11-01), Sassuolo v Fiorentina (2026-11-02), Atalanta v Parma (2026-11-02), Venezia v Udinese (2026-11-06), Cagliari v Frosinone (2026-11-07), Torino v Lecce (2026-11-07), Parma v Bologna (2026-11-07), Roma v Sassuolo (2026-11-07), Napoli v Lazio (2026-11-08), Genoa v Milan (2026-11-08), Monza v Atalanta (2026-11-08), Inter v Como (2026-11-08), Fiorentina v Juventus (2026-11-08)"
+    "Understat has no xG yet for 26 played match(es): Como v Venezia (2026-11-01), Frosinone v Torino (2026-11-01), Lazio v Cagliari (2026-11-01), Lecce v Genoa (2026-11-01), Juventus v Napoli (2026-11-01), Sassuolo v Fiorentina (2026-11-02), Atalanta v Parma (2026-11-02), Venezia v Udinese (2026-11-06), Cagliari v Frosinone (2026-11-07), Torino v Lecce (2026-11-07), Parma v Bologna (2026-11-07), Roma v Sassuolo (2026-11-07), Napoli v Lazio (2026-11-08), Genoa v Milan (2026-11-08), Monza v Atalanta (2026-11-08), Inter v Como (2026-11-08), Fiorentina v Juventus (2026-11-08), Como v Cagliari (2026-11-21), Lazio v Lecce (2026-11-21), Parma v Roma (2026-11-21), Napoli v Torino (2026-11-21), Juventus v Venezia (2026-11-22), Bologna v Udinese (2026-11-22), Sassuolo v Genoa (2026-11-22), Milan v Frosinone (2026-11-22), Atalanta v Inter (2026-11-22)"
   ]
 }
