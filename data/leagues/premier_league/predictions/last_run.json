@@ -1,10 +1,6 @@
 {
-  "run_timestamp": "2026-11-24T16:34:08+00:00",
-  "status": "predicted",
-  "message": "Predicted 10 fixture(s) for round 12. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
-  "round": 12,
-  "forced": true,
-  "problems": [
-    "Understat has no xG yet for 22 played match(es): Liverpool v Arsenal (2026-11-01), Newcastle v Everton (2026-11-02), Everton v Coventry (2026-11-06), Leeds v Tottenham (2026-11-07), Arsenal v Hull (2026-11-07), Fulham v Newcastle (2026-11-07), Nott'm Forest v Man City (2026-11-07), Brighton v Brentford (2026-11-08), Crystal Palace v Liverpool (2026-11-08), Ipswich v Bournemouth (2026-11-08), Sunderland v Chelsea (2026-11-08), Man United v Aston Villa (2026-11-08), Man City v Fulham (2026-11-21), Aston Villa v Sunderland (2026-11-21), Bournemouth v Nott'm Forest (2026-11-21), Chelsea v Leeds (2026-11-21), Coventry v Crystal Palace (2026-11-21), Tottenham v Ipswich (2026-11-21), Newcastle v Arsenal (2026-11-21), Hull v Brighton (2026-11-22), Liverpool v Man United (2026-11-22), Brentford v Everton (2026-11-23)"
-  ]
+  "run_timestamp": "2026-11-25T02:02:35+00:00",
+  "status": "unchanged",
+  "message": "Round 12 already predicted from the latest data. Understat is unavailable and has no xG for matches since 1 Nov, so the predictions leave it out until it catches up.",
+  "round": 12
 }
